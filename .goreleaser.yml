@@ -1,0 +1,55 @@
+version: 2
+
+builds:
+  - id: mwb
+    main: ./cmd/mwb
+    binary: mwb
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+nfpms:
+  - id: mwb
+    package_name: mwb
+    file_name_template: "{{ .ConventionalFileName }}"
+    ids:
+      - mwb
+    vendor: Brian Ketelsen
+    homepage: https://github.com/bketelsen/mwb
+    maintainer: Brian Ketelsen <mail@bjk.dev>
+    description: Mouse Without Borders Linux client
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: packaging/mwb.service
+        dst: /usr/lib/systemd/user/mwb.service
+        type: config
+      - src: packaging/99-mwb.rules
+        dst: /usr/lib/udev/rules.d/99-mwb.rules
+        type: config
+    scripts:
+      postinstall: packaging/scripts/postinstall.sh
+      preremove: packaging/scripts/preremove.sh
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

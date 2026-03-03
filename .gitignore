@@ -1,2 +1,5 @@
 # Built binary
 /mwb
+
+# GoReleaser output
+/dist/
