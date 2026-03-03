@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bjk/mwb/internal/protocol"
+	"github.com/bketelsen/mwb/internal/protocol"
 )
 
 func TestConnectionHandshake(t *testing.T) {

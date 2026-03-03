@@ -6,7 +6,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/bjk/mwb/internal/protocol"
+	"github.com/bketelsen/mwb/internal/protocol"
 )
 
 // ReceiveLoop reads packets from the connection and dispatches them.

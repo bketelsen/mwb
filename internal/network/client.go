@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bjk/mwb/internal/protocol"
+	"github.com/bketelsen/mwb/internal/protocol"
 )
 
 // Conn represents an established, encrypted MWB connection.

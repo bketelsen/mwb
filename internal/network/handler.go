@@ -4,8 +4,8 @@ package network
 import (
 	"log/slog"
 
-	"github.com/bjk/mwb/internal/input"
-	"github.com/bjk/mwb/internal/protocol"
+	"github.com/bketelsen/mwb/internal/input"
+	"github.com/bketelsen/mwb/internal/protocol"
 )
 
 // MouseDevice is the interface for mouse injection.

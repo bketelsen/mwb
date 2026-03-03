@@ -1,4 +1,4 @@
-module github.com/bjk/mwb
+module github.com/bketelsen/mwb
 
 go 1.25.0
 

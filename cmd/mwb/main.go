@@ -11,9 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bjk/mwb/internal/config"
-	"github.com/bjk/mwb/internal/input"
-	"github.com/bjk/mwb/internal/network"
+	"github.com/bketelsen/mwb/internal/config"
+	"github.com/bketelsen/mwb/internal/input"
+	"github.com/bketelsen/mwb/internal/network"
 )
 
 func main() {

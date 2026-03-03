@@ -4,7 +4,7 @@ package network
 import (
 	"testing"
 
-	"github.com/bjk/mwb/internal/protocol"
+	"github.com/bketelsen/mwb/internal/protocol"
 )
 
 // MockInputDevice records calls for testing.
