@@ -30,14 +30,10 @@ sudo usermod -aG input $USER
 ## Installation
 
 ```bash
-make build
-```
-
-Or install directly:
-
-```bash
 make install
 ```
+
+This builds the binary, installs it to `~/go/bin/mwb`, and sets up a systemd user service.
 
 ## Configuration
 
@@ -53,6 +49,26 @@ name = "linux"            # Name shown in the MWB device layout (max 15 chars)
 The security key is found in PowerToys > Mouse Without Borders > Security key.
 
 ## Usage
+
+### As a systemd service (recommended)
+
+```bash
+systemctl --user enable --now mwb
+```
+
+View logs:
+
+```bash
+journalctl --user -u mwb -f
+```
+
+To uninstall:
+
+```bash
+make uninstall
+```
+
+### Manual
 
 ```bash
 mwb                          # uses default config path
