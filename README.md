@@ -1,11 +1,11 @@
 # mwb
 
-A Linux client for [Microsoft PowerToys Mouse Without Borders](https://learn.microsoft.com/en-us/windows/powertoys/mouse-without-borders). Share your Windows keyboard and mouse with a Linux machine over the network.
+A Linux (Wayland only) client for [Microsoft PowerToys Mouse Without Borders](https://learn.microsoft.com/en-us/windows/powertoys/mouse-without-borders). Share your Windows keyboard and mouse with a Linux machine over the network.
 
 ## Prerequisites
 
 - Go 1.25+
-- Linux with uinput support
+- Linux with uinput support, Wayland display
 - A Windows machine running PowerToys Mouse Without Borders
 
 ## System Setup
