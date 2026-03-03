@@ -10,12 +10,14 @@ import (
 func TestLoadConfig(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
-	os.WriteFile(path, []byte(`
+	if err := os.WriteFile(path, []byte(`
 host = "192.168.1.50"
 key = "MySecurityKey1234"
 name = "testbox"
 port = 15100
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	cfg, err := Load(path)
 	if err != nil {
@@ -38,10 +40,12 @@ port = 15100
 func TestLoadConfigDefaults(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
-	os.WriteFile(path, []byte(`
+	if err := os.WriteFile(path, []byte(`
 host = "10.0.0.1"
 key = "SomeKeyHere!1234"
-`), 0644)
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	cfg, err := Load(path)
 	if err != nil {
@@ -60,13 +64,17 @@ func TestLoadConfigValidation(t *testing.T) {
 	path := filepath.Join(dir, "config.toml")
 
 	// Missing host
-	os.WriteFile(path, []byte(`key = "SomeKeyHere!1234"`), 0644)
+	if err := os.WriteFile(path, []byte(`key = "SomeKeyHere!1234"`), 0644); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := Load(path); err == nil {
 		t.Error("should fail without host")
 	}
 
 	// Missing key
-	os.WriteFile(path, []byte(`host = "10.0.0.1"`), 0644)
+	if err := os.WriteFile(path, []byte(`host = "10.0.0.1"`), 0644); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := Load(path); err == nil {
 		t.Error("should fail without key")
 	}

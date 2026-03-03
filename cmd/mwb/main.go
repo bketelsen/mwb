@@ -49,14 +49,14 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Ensure your user is in the 'input' group: sudo usermod -aG input $USER\n")
 		os.Exit(1)
 	}
-	defer mouse.Close()
+	defer func() { _ = mouse.Close() }()
 
 	keyboard, err := input.CreateVirtualKeyboard("mwb-keyboard")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error creating virtual keyboard: %v\n", err)
 		os.Exit(1)
 	}
-	defer keyboard.Close()
+	defer func() { _ = keyboard.Close() }()
 
 	slog.Info("virtual input devices created")
 
@@ -91,7 +91,7 @@ func main() {
 				slog.Error("receive loop error", "err", err)
 			}
 
-			conn.Close()
+			_ = conn.Close()
 			slog.Info("disconnected, will reconnect", "in", backoff)
 			time.Sleep(backoff)
 		}

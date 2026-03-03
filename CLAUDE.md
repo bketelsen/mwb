@@ -17,7 +17,14 @@ docs/plans/         - Implementation plan
 ```bash
 make build   # builds ./mwb
 make test    # runs go test ./...
+make fmt     # format all Go files
+make lint    # run golangci-lint
+make check   # fmt + lint + test (run before committing)
 ```
+
+## Before Committing
+
+Always run `make check` before committing any changes. All code must pass formatting, linting, and tests.
 
 ## Protocol Notes
 

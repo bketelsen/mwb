@@ -13,7 +13,7 @@ func canAccessUinput(t *testing.T) {
 	if err != nil {
 		t.Skipf("skipping: cannot access /dev/uinput: %v", err)
 	}
-	f.Close()
+	_ = f.Close()
 }
 
 func TestCreateVirtualMouse(t *testing.T) {
@@ -23,7 +23,7 @@ func TestCreateVirtualMouse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer m.Close()
+	defer func() { _ = m.Close() }()
 
 	if err := m.MoveTo(32768, 32768); err != nil {
 		t.Errorf("MoveTo: %v", err)
@@ -40,7 +40,7 @@ func TestCreateVirtualKeyboard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer k.Close()
+	defer func() { _ = k.Close() }()
 
 	if err := k.KeyDown(KEY_A); err != nil {
 		t.Errorf("KeyDown: %v", err)

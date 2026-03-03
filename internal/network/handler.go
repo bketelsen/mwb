@@ -44,27 +44,34 @@ func (h *Handler) HandlePacket(pkt *protocol.Packet) {
 
 func (h *Handler) handleMouse(pkt *protocol.Packet) {
 	md := pkt.Mouse
+	var err error
 	switch int(md.DwFlags) {
 	case protocol.WM_MOUSEMOVE:
-		h.Mouse.MoveTo(md.X, md.Y)
+		err = h.Mouse.MoveTo(md.X, md.Y)
 	case protocol.WM_LBUTTONDOWN:
-		h.Mouse.MoveTo(md.X, md.Y)
-		h.Mouse.ButtonDown(input.BTN_LEFT)
+		if err = h.Mouse.MoveTo(md.X, md.Y); err == nil {
+			err = h.Mouse.ButtonDown(input.BTN_LEFT)
+		}
 	case protocol.WM_LBUTTONUP:
-		h.Mouse.MoveTo(md.X, md.Y)
-		h.Mouse.ButtonUp(input.BTN_LEFT)
+		if err = h.Mouse.MoveTo(md.X, md.Y); err == nil {
+			err = h.Mouse.ButtonUp(input.BTN_LEFT)
+		}
 	case protocol.WM_RBUTTONDOWN:
-		h.Mouse.MoveTo(md.X, md.Y)
-		h.Mouse.ButtonDown(input.BTN_RIGHT)
+		if err = h.Mouse.MoveTo(md.X, md.Y); err == nil {
+			err = h.Mouse.ButtonDown(input.BTN_RIGHT)
+		}
 	case protocol.WM_RBUTTONUP:
-		h.Mouse.MoveTo(md.X, md.Y)
-		h.Mouse.ButtonUp(input.BTN_RIGHT)
+		if err = h.Mouse.MoveTo(md.X, md.Y); err == nil {
+			err = h.Mouse.ButtonUp(input.BTN_RIGHT)
+		}
 	case protocol.WM_MBUTTONDOWN:
-		h.Mouse.MoveTo(md.X, md.Y)
-		h.Mouse.ButtonDown(input.BTN_MIDDLE)
+		if err = h.Mouse.MoveTo(md.X, md.Y); err == nil {
+			err = h.Mouse.ButtonDown(input.BTN_MIDDLE)
+		}
 	case protocol.WM_MBUTTONUP:
-		h.Mouse.MoveTo(md.X, md.Y)
-		h.Mouse.ButtonUp(input.BTN_MIDDLE)
+		if err = h.Mouse.MoveTo(md.X, md.Y); err == nil {
+			err = h.Mouse.ButtonUp(input.BTN_MIDDLE)
+		}
 	case protocol.WM_MOUSEWHEEL:
 		delta := md.WheelDelta / 120
 		if delta == 0 && md.WheelDelta > 0 {
@@ -72,9 +79,13 @@ func (h *Handler) handleMouse(pkt *protocol.Packet) {
 		} else if delta == 0 && md.WheelDelta < 0 {
 			delta = -1
 		}
-		h.Mouse.Wheel(delta)
+		err = h.Mouse.Wheel(delta)
 	default:
 		slog.Debug("unhandled mouse event", "flags", md.DwFlags)
+		return
+	}
+	if err != nil {
+		slog.Error("mouse input error", "err", err)
 	}
 }
 
@@ -85,10 +96,14 @@ func (h *Handler) handleKeyboard(pkt *protocol.Packet) {
 		slog.Debug("unknown VK code", "vk", kd.WVk)
 		return
 	}
+	var err error
 	isUp := (kd.DwFlags & protocol.LLKHF_UP) != 0
 	if isUp {
-		h.Keyboard.KeyUp(evdevCode)
+		err = h.Keyboard.KeyUp(evdevCode)
 	} else {
-		h.Keyboard.KeyDown(evdevCode)
+		err = h.Keyboard.KeyDown(evdevCode)
+	}
+	if err != nil {
+		slog.Error("keyboard input error", "err", err)
 	}
 }

@@ -44,9 +44,9 @@ const (
 
 // Absolute axes
 const (
-	absX    uint16 = 0x00
-	absY    uint16 = 0x01
-	absCnt         = 0x40
+	absX   uint16 = 0x00
+	absY   uint16 = 0x01
+	absCnt        = 0x40
 )
 
 const busVirtual uint16 = 0x06
@@ -138,7 +138,7 @@ func CreateVirtualMouse(name string) (*VirtualMouse, error) {
 	ok := false
 	defer func() {
 		if !ok {
-			fd.Close()
+			_ = fd.Close()
 		}
 	}()
 
@@ -238,7 +238,7 @@ func (m *VirtualMouse) Wheel(delta int32) error {
 
 // Close destroys the virtual device and closes the file descriptor.
 func (m *VirtualMouse) Close() error {
-	ioctl(m.fd, uiDevDestroy, 0)
+	_ = ioctl(m.fd, uiDevDestroy, 0)
 	return m.fd.Close()
 }
 
@@ -257,7 +257,7 @@ func CreateVirtualKeyboard(name string) (*VirtualKeyboard, error) {
 	ok := false
 	defer func() {
 		if !ok {
-			fd.Close()
+			_ = fd.Close()
 		}
 	}()
 
@@ -307,6 +307,6 @@ func (k *VirtualKeyboard) KeyUp(code uint16) error {
 
 // Close destroys the virtual device and closes the file descriptor.
 func (k *VirtualKeyboard) Close() error {
-	ioctl(k.fd, uiDevDestroy, 0)
+	_ = ioctl(k.fd, uiDevDestroy, 0)
 	return k.fd.Close()
 }

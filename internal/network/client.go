@@ -39,12 +39,12 @@ func Connect(addr, securityKey, machineName string, timeout time.Duration) (*Con
 	ok := false
 	defer func() {
 		if !ok {
-			raw.Close()
+			_ = raw.Close()
 		}
 	}()
 
 	if tc, ok := raw.(*net.TCPConn); ok {
-		tc.SetNoDelay(true)
+		_ = tc.SetNoDelay(true)
 	}
 
 	enc, err := protocol.NewEncryptWriter(raw, aesKey, iv)
@@ -113,7 +113,7 @@ func (c *Conn) doHandshake(machineName string) error {
 
 	// Random machine fields for challenge
 	challenge := make([]byte, 16)
-	rand.Read(challenge)
+	_, _ = rand.Read(challenge)
 	hs.Handshake.Machine1 = uint32(challenge[0])<<24 | uint32(challenge[1])<<16 | uint32(challenge[2])<<8 | uint32(challenge[3])
 	hs.Handshake.Machine2 = uint32(challenge[4])<<24 | uint32(challenge[5])<<16 | uint32(challenge[6])<<8 | uint32(challenge[7])
 	hs.Handshake.Machine3 = uint32(challenge[8])<<24 | uint32(challenge[9])<<16 | uint32(challenge[10])<<8 | uint32(challenge[11])
@@ -134,8 +134,8 @@ func (c *Conn) doHandshake(machineName string) error {
 	}
 
 	// Read packets until we get a valid HandshakeAck
-	c.raw.SetReadDeadline(time.Now().Add(10 * time.Second))
-	defer c.raw.SetReadDeadline(time.Time{})
+	_ = c.raw.SetReadDeadline(time.Now().Add(10 * time.Second))
+	defer func() { _ = c.raw.SetReadDeadline(time.Time{}) }()
 
 	for i := 0; i < 20; i++ {
 		pkt, err := c.RecvPacket()
@@ -155,7 +155,9 @@ func (c *Conn) doHandshake(machineName string) error {
 			ack.Handshake.Machine3 = ^pkt.Handshake.Machine3
 			ack.Handshake.Machine4 = ^pkt.Handshake.Machine4
 			ack.SetMachineName(machineName)
-			c.SendPacket(ack)
+			if err := c.SendPacket(ack); err != nil {
+				return fmt.Errorf("send handshake ack: %w", err)
+			}
 			continue
 		}
 

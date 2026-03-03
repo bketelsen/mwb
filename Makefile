@@ -1,4 +1,4 @@
-.PHONY: build install clean test
+.PHONY: build install clean test fmt lint check
 
 build:
 	go build -o mwb ./cmd/mwb
@@ -11,3 +11,11 @@ clean:
 
 test:
 	go test ./...
+
+fmt:
+	gofmt -w .
+
+lint:
+	golangci-lint run
+
+check: fmt lint test

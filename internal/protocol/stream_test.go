@@ -11,7 +11,7 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 	key := DeriveKey("TestSecurityKey!!")
 	iv := FixedIV()
 
-	plaintext := []byte("Hello, Mouse Without Borders!!!!")  // exactly 32 bytes
+	plaintext := []byte("Hello, Mouse Without Borders!!!!") // exactly 32 bytes
 	if len(plaintext) != 32 {
 		t.Fatalf("plaintext len = %d, want 32", len(plaintext))
 	}
@@ -59,8 +59,12 @@ func TestEncryptedStreamMultipleBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	enc.Write(pkt1)
-	enc.Write(pkt2)
+	if _, err = enc.Write(pkt1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = enc.Write(pkt2); err != nil {
+		t.Fatal(err)
+	}
 
 	dec, err := NewDecryptReader(bytes.NewReader(cipherBuf.Bytes()), key, iv)
 	if err != nil {
@@ -68,9 +72,13 @@ func TestEncryptedStreamMultipleBlocks(t *testing.T) {
 	}
 
 	got1 := make([]byte, 32)
-	io.ReadFull(dec, got1)
+	if _, err = io.ReadFull(dec, got1); err != nil {
+		t.Fatal(err)
+	}
 	got2 := make([]byte, 32)
-	io.ReadFull(dec, got2)
+	if _, err = io.ReadFull(dec, got2); err != nil {
+		t.Fatal(err)
+	}
 
 	if !bytes.Equal(got1, pkt1) {
 		t.Error("packet 1 mismatch")

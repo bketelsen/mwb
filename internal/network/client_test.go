@@ -23,7 +23,7 @@ func TestConnectionHandshake(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	serverDone := make(chan error, 1)
 	go func() {
@@ -32,7 +32,7 @@ func TestConnectionHandshake(t *testing.T) {
 			serverDone <- err
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		// Server: create encrypted streams
 		enc, err := protocol.NewEncryptWriter(conn, aesKey, iv)
@@ -48,7 +48,7 @@ func TestConnectionHandshake(t *testing.T) {
 
 		// Server: send random IV block
 		ranData := make([]byte, 16)
-		rand.Read(ranData)
+		_, _ = rand.Read(ranData)
 		if _, err := enc.Write(ranData); err != nil {
 			serverDone <- err
 			return
@@ -89,7 +89,7 @@ func TestConnectionHandshake(t *testing.T) {
 		// Drain remaining handshake packets (client sends 10)
 		for i := 0; i < 9; i++ {
 			drain := make([]byte, protocol.PacketSizeEx)
-			io.ReadFull(dec, drain)
+			_, _ = io.ReadFull(dec, drain)
 		}
 
 		// Server: send HandshakeAck with inverted machine fields
@@ -120,7 +120,7 @@ func TestConnectionHandshake(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	if conn.RemoteName != "WINHOST" {
 		t.Errorf("remote name = %q, want %q", conn.RemoteName, "WINHOST")
