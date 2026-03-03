@@ -132,7 +132,7 @@ type VirtualMouse struct {
 func CreateVirtualMouse(name string) (*VirtualMouse, error) {
 	fd, err := os.OpenFile("/dev/uinput", os.O_WRONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return nil, fmt.Errorf("open /dev/uinput: %w (ensure user is in 'input' group)", err)
+		return nil, fmt.Errorf("open /dev/uinput: %w\nSetup required:\n  1. sudo modprobe uinput\n  2. echo 'uinput' | sudo tee /etc/modules-load.d/uinput.conf\n  3. echo 'KERNEL==\"uinput\", GROUP=\"input\", MODE=\"0660\"' | sudo tee /etc/udev/rules.d/99-uinput.rules\n  4. sudo udevadm control --reload-rules && sudo udevadm trigger /dev/uinput\n  5. Ensure your user is in the 'input' group: sudo usermod -aG input $USER", err)
 	}
 
 	ok := false
@@ -251,7 +251,7 @@ type VirtualKeyboard struct {
 func CreateVirtualKeyboard(name string) (*VirtualKeyboard, error) {
 	fd, err := os.OpenFile("/dev/uinput", os.O_WRONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return nil, fmt.Errorf("open /dev/uinput: %w (ensure user is in 'input' group)", err)
+		return nil, fmt.Errorf("open /dev/uinput: %w\nSetup required:\n  1. sudo modprobe uinput\n  2. echo 'uinput' | sudo tee /etc/modules-load.d/uinput.conf\n  3. echo 'KERNEL==\"uinput\", GROUP=\"input\", MODE=\"0660\"' | sudo tee /etc/udev/rules.d/99-uinput.rules\n  4. sudo udevadm control --reload-rules && sudo udevadm trigger /dev/uinput\n  5. Ensure your user is in the 'input' group: sudo usermod -aG input $USER", err)
 	}
 
 	ok := false

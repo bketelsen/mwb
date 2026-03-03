@@ -22,6 +22,17 @@ func ReceiveLoop(conn *Conn, handler *Handler) error {
 		}
 
 		switch pkt.Type {
+		case protocol.Hi:
+			slog.Debug("Hi received, responding with Hello", "localName", conn.LocalName, "machineID", conn.MachineID)
+			resp := &protocol.Packet{
+				Type: protocol.Hello,
+				Src:  conn.MachineID,
+				Des:  pkt.Src,
+			}
+			resp.SetMachineName(conn.LocalName)
+			if err := conn.SendPacket(resp); err != nil {
+				slog.Error("send Hello response", "err", err)
+			}
 		case protocol.Heartbeat, protocol.HeartbeatEx, protocol.HeartbeatExL2, protocol.HeartbeatExL3:
 			slog.Debug("heartbeat received", "type", pkt.Type, "from", pkt.MachineName())
 			resp := &protocol.Packet{
@@ -29,7 +40,7 @@ func ReceiveLoop(conn *Conn, handler *Handler) error {
 				Src:  conn.MachineID,
 				Des:  pkt.Src,
 			}
-			resp.SetMachineName(conn.RemoteName)
+			resp.SetMachineName(conn.LocalName)
 			if err := conn.SendPacket(resp); err != nil {
 				slog.Error("send heartbeat response", "err", err)
 			}

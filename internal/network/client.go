@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/bjk/mwb/internal/protocol"
@@ -19,7 +20,9 @@ type Conn struct {
 	dec        *protocol.DecryptReader
 	magic      uint32
 	MachineID  uint32
+	LocalName  string
 	RemoteName string
+	nextID     atomic.Int32
 }
 
 // Connect establishes a TCP connection, performs IV exchange and handshake.
@@ -78,10 +81,22 @@ func Connect(addr, securityKey, machineName string, timeout time.Duration) (*Con
 		dec:       dec,
 		magic:     magic,
 		MachineID: machineID,
+		LocalName: machineName,
 	}
 
 	if err := c.doHandshake(machineName); err != nil {
 		return nil, fmt.Errorf("handshake: %w", err)
+	}
+
+	// Send initial heartbeat to trigger device registration on the server
+	hb := &protocol.Packet{
+		Type: protocol.HeartbeatEx,
+		Src:  c.MachineID,
+		Des:  protocol.IDAll,
+	}
+	hb.SetMachineName(machineName)
+	if err := c.SendPacket(hb); err != nil {
+		return nil, fmt.Errorf("send heartbeat: %w", err)
 	}
 
 	ok = true
@@ -132,7 +147,7 @@ func (c *Conn) doHandshake(machineName string) error {
 			// Peer's handshake; respond with ACK
 			ack := &protocol.Packet{
 				Type: protocol.HandshakeAck,
-				Src:  0,
+				Src:  c.MachineID,
 				Des:  pkt.Src,
 			}
 			ack.Handshake.Machine1 = ^pkt.Handshake.Machine1
@@ -161,7 +176,10 @@ func (c *Conn) doHandshake(machineName string) error {
 }
 
 // SendPacket marshals, stamps, and sends a packet.
+// Automatically assigns an incrementing packet ID (starting at 1) to avoid
+// the server's dedup ring buffer which is zero-initialized.
 func (c *Conn) SendPacket(p *protocol.Packet) error {
+	p.ID = c.nextID.Add(1)
 	buf := p.Marshal()
 	protocol.StampPacket(buf, c.magic)
 	_, err := c.enc.Write(buf)

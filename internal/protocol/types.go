@@ -63,6 +63,9 @@ const (
 	LLKHF_UP       = 0x80
 )
 
+// IDAll is the broadcast destination (Des=255 means "all machines").
+const IDAll = 255
+
 // MoveMouseRelative is the offset added to X/Y to signal relative mouse movement.
 const MoveMouseRelative = 100000
 

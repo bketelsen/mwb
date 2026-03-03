@@ -35,6 +35,8 @@ func (h *Handler) HandlePacket(pkt *protocol.Packet) {
 		h.handleMouse(pkt)
 	case protocol.Keyboard:
 		h.handleKeyboard(pkt)
+	case protocol.Hello, protocol.Awake, protocol.HandshakeAck:
+		// expected control packets — ignore silently
 	default:
 		slog.Debug("unhandled packet type", "type", pkt.Type)
 	}

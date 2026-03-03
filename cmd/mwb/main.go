@@ -40,6 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	slog.Debug("debug logging enabled")
 	slog.Info("mwb starting", "host", cfg.Host, "port", cfg.MessagePort(), "name", cfg.Name)
 
 	mouse, err := input.CreateVirtualMouse("mwb-mouse")
