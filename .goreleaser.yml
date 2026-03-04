@@ -1,13 +1,24 @@
 version: 2
 
 builds:
-  - id: mwb
+  - id: mwb-linux
     main: ./cmd/mwb
     binary: mwb
     env:
       - CGO_ENABLED=0
     goos:
       - linux
+    goarch:
+      - amd64
+      - arm64
+
+  - id: mwb-darwin
+    main: ./cmd/mwb
+    binary: mwb
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - darwin
     goarch:
       - amd64
       - arm64
@@ -22,7 +33,7 @@ nfpms:
     package_name: mwb
     file_name_template: "{{ .ConventionalFileName }}"
     ids:
-      - mwb
+      - mwb-linux
     vendor: Brian Ketelsen
     homepage: https://github.com/bketelsen/mwb
     maintainer: Brian Ketelsen <mail@bjk.dev>
