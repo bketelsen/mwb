@@ -30,13 +30,6 @@ const (
 	evAbs uint16 = 0x03
 )
 
-// Buttons (exported for use by handler)
-const (
-	BTN_LEFT   uint16 = 0x110
-	BTN_RIGHT  uint16 = 0x111
-	BTN_MIDDLE uint16 = 0x112
-)
-
 // Relative axes
 const (
 	relWheel uint16 = 0x08
