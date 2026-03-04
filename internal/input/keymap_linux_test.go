@@ -1,9 +1,11 @@
-// internal/input/keymap_test.go
+//go:build linux
+
+// internal/input/keymap_linux_test.go
 package input
 
 import "testing"
 
-func TestVKToEvdev(t *testing.T) {
+func TestVKToKeyCode(t *testing.T) {
 	tests := []struct {
 		name string
 		vk   int32
@@ -41,7 +43,7 @@ func TestVKToEvdev(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, ok := VKToEvdev(tt.vk)
+			got, ok := VKToKeyCode(tt.vk)
 			if tt.want == 0 {
 				if ok {
 					t.Errorf("expected unknown for VK 0x%X", tt.vk)
@@ -49,7 +51,7 @@ func TestVKToEvdev(t *testing.T) {
 				return
 			}
 			if !ok || got != tt.want {
-				t.Errorf("VKToEvdev(0x%X) = %d, %v; want %d, true", tt.vk, got, ok, tt.want)
+				t.Errorf("VKToKeyCode(0x%X) = %d, %v; want %d, true", tt.vk, got, ok, tt.want)
 			}
 		})
 	}

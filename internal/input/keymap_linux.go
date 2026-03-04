@@ -1,4 +1,6 @@
-// internal/input/keymap.go
+//go:build linux
+
+// internal/input/keymap_linux.go
 package input
 
 // Linux evdev key codes (from /usr/include/linux/input-event-codes.h)
@@ -157,8 +159,8 @@ func init() {
 	}
 }
 
-// VKToEvdev maps a Windows Virtual Key code to a Linux evdev key code.
-func VKToEvdev(vk int32) (uint16, bool) {
+// VKToKeyCode maps a Windows Virtual Key code to a platform-specific key code.
+func VKToKeyCode(vk int32) (uint16, bool) {
 	code, ok := vkMap[vk]
 	return code, ok
 }

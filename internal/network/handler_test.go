@@ -4,6 +4,7 @@ package network
 import (
 	"testing"
 
+	"github.com/bketelsen/mwb/internal/input"
 	"github.com/bketelsen/mwb/internal/protocol"
 )
 
@@ -68,13 +69,13 @@ func TestHandleMouseButtons(t *testing.T) {
 	pkt := &protocol.Packet{Type: protocol.Mouse}
 	pkt.Mouse.DwFlags = protocol.WM_LBUTTONDOWN
 	h.HandlePacket(pkt)
-	if len(mock.ButtonDowns) != 1 || mock.ButtonDowns[0] != 0x110 {
+	if len(mock.ButtonDowns) != 1 || mock.ButtonDowns[0] != input.BTN_LEFT {
 		t.Errorf("expected BTN_LEFT down, got %v", mock.ButtonDowns)
 	}
 
 	pkt.Mouse.DwFlags = protocol.WM_LBUTTONUP
 	h.HandlePacket(pkt)
-	if len(mock.ButtonUps) != 1 || mock.ButtonUps[0] != 0x110 {
+	if len(mock.ButtonUps) != 1 || mock.ButtonUps[0] != input.BTN_LEFT {
 		t.Errorf("expected BTN_LEFT up, got %v", mock.ButtonUps)
 	}
 }
@@ -83,21 +84,26 @@ func TestHandleKeyboard(t *testing.T) {
 	mock := &MockInputDevice{}
 	h := &Handler{Mouse: mock, Keyboard: mock}
 
-	// Key down: VK_A (0x41) -> KEY_A (30)
+	expectedCode, ok := input.VKToKeyCode(0x41)
+	if !ok {
+		t.Fatal("VKToKeyCode(0x41) should map VK_A")
+	}
+
+	// Key down: VK_A (0x41)
 	pkt := &protocol.Packet{Type: protocol.Keyboard}
 	pkt.Keyboard.WVk = 0x41
 	pkt.Keyboard.DwFlags = 0
 
 	h.HandlePacket(pkt)
-	if len(mock.KeyDowns) != 1 || mock.KeyDowns[0] != 30 {
-		t.Errorf("expected KEY_A(30) down, got %v", mock.KeyDowns)
+	if len(mock.KeyDowns) != 1 || mock.KeyDowns[0] != expectedCode {
+		t.Errorf("expected keycode %d down, got %v", expectedCode, mock.KeyDowns)
 	}
 
 	// Key up: VK_A with LLKHF_UP (0x80)
 	pkt.Keyboard.DwFlags = protocol.LLKHF_UP
 	h.HandlePacket(pkt)
-	if len(mock.KeyUps) != 1 || mock.KeyUps[0] != 30 {
-		t.Errorf("expected KEY_A(30) up, got %v", mock.KeyUps)
+	if len(mock.KeyUps) != 1 || mock.KeyUps[0] != expectedCode {
+		t.Errorf("expected keycode %d up, got %v", expectedCode, mock.KeyUps)
 	}
 }
 
@@ -122,7 +128,7 @@ func TestHandleRightButton(t *testing.T) {
 	pkt := &protocol.Packet{Type: protocol.Mouse}
 	pkt.Mouse.DwFlags = protocol.WM_RBUTTONDOWN
 	h.HandlePacket(pkt)
-	if len(mock.ButtonDowns) != 1 || mock.ButtonDowns[0] != 0x111 {
+	if len(mock.ButtonDowns) != 1 || mock.ButtonDowns[0] != input.BTN_RIGHT {
 		t.Errorf("expected BTN_RIGHT down, got %v", mock.ButtonDowns)
 	}
 }
@@ -134,7 +140,7 @@ func TestHandleMiddleButton(t *testing.T) {
 	pkt := &protocol.Packet{Type: protocol.Mouse}
 	pkt.Mouse.DwFlags = protocol.WM_MBUTTONDOWN
 	h.HandlePacket(pkt)
-	if len(mock.ButtonDowns) != 1 || mock.ButtonDowns[0] != 0x112 {
+	if len(mock.ButtonDowns) != 1 || mock.ButtonDowns[0] != input.BTN_MIDDLE {
 		t.Errorf("expected BTN_MIDDLE down, got %v", mock.ButtonDowns)
 	}
 }

@@ -91,7 +91,7 @@ func (h *Handler) handleMouse(pkt *protocol.Packet) {
 
 func (h *Handler) handleKeyboard(pkt *protocol.Packet) {
 	kd := pkt.Keyboard
-	evdevCode, ok := input.VKToEvdev(kd.WVk)
+	keyCode, ok := input.VKToKeyCode(kd.WVk)
 	if !ok {
 		slog.Debug("unknown VK code", "vk", kd.WVk)
 		return
@@ -99,9 +99,9 @@ func (h *Handler) handleKeyboard(pkt *protocol.Packet) {
 	var err error
 	isUp := (kd.DwFlags & protocol.LLKHF_UP) != 0
 	if isUp {
-		err = h.Keyboard.KeyUp(evdevCode)
+		err = h.Keyboard.KeyUp(keyCode)
 	} else {
-		err = h.Keyboard.KeyDown(evdevCode)
+		err = h.Keyboard.KeyDown(keyCode)
 	}
 	if err != nil {
 		slog.Error("keyboard input error", "err", err)
