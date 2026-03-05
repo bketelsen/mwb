@@ -3,7 +3,7 @@
 SYSTEMD_USER_DIR := $(HOME)/.config/systemd/user
 
 build:
-	go build -o mwb ./cmd/mwb
+	go build -o build/mwb ./cmd/mwb
 
 install: build
 	install -D mwb $(HOME)/go/bin/mwb
@@ -24,7 +24,7 @@ uninstall:
 	systemctl --user daemon-reload
 
 clean:
-	rm -f mwb
+	rm -rf build/
 
 test:
 	go test ./...
