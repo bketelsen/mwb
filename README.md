@@ -40,7 +40,7 @@ If running from Terminal, you may need to grant the permission to Terminal.app i
 
 ## Installation
 
-### Homebrew (Linux and macOS)
+### Homebrew (Linux and macOS) - Experimental
 
 ```bash
 brew tap bketelsen/tap
@@ -54,6 +54,7 @@ brew services start mwb
 ```
 
 On macOS you must grant Accessibility permissions after installing:
+
 > System Settings → Privacy & Security → Accessibility → Add `mwb`
 
 ### Linux (deb/rpm)
