@@ -40,7 +40,27 @@ If running from Terminal, you may need to grant the permission to Terminal.app i
 
 ## Installation
 
-### Linux
+### Homebrew (Linux and macOS)
+
+```bash
+brew tap bketelsen/tap
+brew install mwb
+```
+
+To start `mwb` automatically on login:
+
+```bash
+brew services start mwb
+```
+
+On macOS you must grant Accessibility permissions after installing:
+> System Settings → Privacy & Security → Accessibility → Add `mwb`
+
+### Linux (deb/rpm)
+
+Download the latest `.deb` or `.rpm` from the [releases page](https://github.com/bketelsen/mwb/releases).
+
+### Linux (from source)
 
 ```bash
 make install
@@ -48,7 +68,7 @@ make install
 
 This builds the binary, installs it to `~/go/bin/mwb`, and sets up a systemd user service.
 
-### macOS
+### macOS (manual)
 
 ```bash
 make build
