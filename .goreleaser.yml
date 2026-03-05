@@ -53,7 +53,7 @@ nfpms:
       postinstall: packaging/scripts/postinstall.sh
       preremove: packaging/scripts/preremove.sh
 
-brews:
+homebrew_casks:
   - name: mwb
     ids:
       - mwb-linux
@@ -62,17 +62,10 @@ brews:
       owner: bketelsen
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
+    directory: Casks
     homepage: "https://github.com/bketelsen/mwb"
     description: "Mouse Without Borders Linux and macOS client for PowerToys KVM sharing"
     license: "MIT"
-    install: |
-      bin.install "mwb"
-    service: |
-      run opt_bin/"mwb"
-      keep_alive true
-      log_path var/"log/mwb.log"
-      error_log_path var/"log/mwb-error.log"
     caveats: |
       mwb requires system-level permissions to control mouse and keyboard input.
 
@@ -87,8 +80,12 @@ brews:
           sudo udevadm control --reload-rules && sudo udevadm trigger
           sudo usermod -aG input $USER
         Log out and back in for the group change to take effect.
-    test: |
-      system "#{bin}/mwb", "--help"
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/mwb"]
+          end
 
 checksum:
   name_template: "checksums.txt"
