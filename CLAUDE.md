@@ -30,7 +30,11 @@ Always run `make check` before committing any changes. All code must pass format
 ## Protocol Notes
 
 - Connects to Windows PowerToys MWB on port 15101 (base 15100 + 1 for messages)
-- AES-256-CBC encryption with PBKDF2-SHA512 key derivation (50k iterations)
+- AES-256-CBC encryption with PBKDF2-SHA512 key derivation. Three stream schemes exist across PowerToys versions (`protocol.Scheme`):
+  - legacy: fixed salt/IV (`"18446744073709551615"`), 50k iterations
+  - header-50k (PowerToys #48742, 2026-06): each stream starts with a cleartext 32-byte header (16-byte random salt + 16-byte random IV), 50k iterations
+  - header-100k (PowerToys #49600, 2026-07): same header, 100k iterations
+- The server sends its preamble and 10 Handshakes without waiting for the client (after ~5s spent resolving the client's name), so `Connect` reads the first `protocol.ProbeSize` bytes, detects the scheme by decrypting the first packet, then replies with the same scheme
 - Handshake: send 10 Handshake packets (type 126), respond to peer's with HandshakeAck (type 127)
 - **Critical**: HandshakeAck must have `Src = MachineID` (not 0), otherwise server stores ID.NONE and never routes packets to the socket
 - **Critical**: All packet IDs must be non-zero and unique — server has a zero-initialized dedup ring buffer that silently drops ID=0 packets

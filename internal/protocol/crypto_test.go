@@ -2,6 +2,8 @@
 package protocol
 
 import (
+	"bytes"
+	"io"
 	"testing"
 )
 
@@ -93,5 +95,83 @@ func TestChecksumAndMagic(t *testing.T) {
 	buf[15] ^= 0xFF
 	if err := ValidatePacket(buf, magic); err == nil {
 		t.Error("validation should fail after corruption")
+	}
+}
+
+// peerStreamPrefix builds the start of a peer stream for scheme: the optional
+// header, the random initial block and one stamped handshake packet.
+func peerStreamPrefix(t *testing.T, securityKey string, s Scheme) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	enc, err := NewSchemeEncryptWriter(&buf, securityKey, s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := enc.Write(make([]byte, 16)); err != nil {
+		t.Fatal(err)
+	}
+	hs := &Packet{Type: Handshake, ID: 1, Src: 7}
+	hs.SetMachineName("WINHOST")
+	pkt := hs.Marshal()
+	StampPacket(pkt, Get24BitHash(securityKey))
+	if _, err := enc.Write(pkt); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func TestDetectScheme(t *testing.T) {
+	securityKey := "TestSecurityKey!!"
+	magic := Get24BitHash(securityKey)
+
+	for _, want := range []Scheme{SchemeLegacy, SchemeHeader50k, SchemeHeader100k} {
+		t.Run(want.String(), func(t *testing.T) {
+			prefix := peerStreamPrefix(t, securityKey, want)
+
+			got, key, iv, offset, err := DetectScheme(prefix, securityKey, magic)
+			if err != nil {
+				t.Fatalf("DetectScheme: %v", err)
+			}
+			if got != want {
+				t.Fatalf("scheme = %v, want %v", got, want)
+			}
+			if want.HasHeader() != (offset == HeaderSize) {
+				t.Fatalf("offset = %d for scheme %v", offset, want)
+			}
+
+			// The returned key and IV must decrypt the rest of the stream
+			dec, err := NewDecryptReader(bytes.NewReader(prefix[offset:]), key, iv)
+			if err != nil {
+				t.Fatal(err)
+			}
+			pt := make([]byte, 16+PacketSizeEx)
+			if _, err := io.ReadFull(dec, pt); err != nil {
+				t.Fatal(err)
+			}
+			if err := ValidatePacket(pt[16:], magic); err != nil {
+				t.Fatalf("decrypted packet invalid: %v", err)
+			}
+			ClearStamp(pt[16:])
+			pkt, err := UnmarshalPacket(pt[16:])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if pkt.Type != Handshake || pkt.MachineName() != "WINHOST" {
+				t.Errorf("packet = type %d name %q", pkt.Type, pkt.MachineName())
+			}
+		})
+	}
+}
+
+func TestDetectSchemeWrongKey(t *testing.T) {
+	prefix := peerStreamPrefix(t, "ServerSecurityKey", SchemeHeader100k)
+	if _, _, _, _, err := DetectScheme(prefix, "ClientSecurityKey", Get24BitHash("ClientSecurityKey")); err == nil {
+		t.Fatal("DetectScheme succeeded with mismatched security key")
+	}
+}
+
+func TestDetectSchemeShortProbe(t *testing.T) {
+	if _, _, _, _, err := DetectScheme(make([]byte, ProbeSize-1), "TestSecurityKey!!", 0); err == nil {
+		t.Fatal("DetectScheme accepted a short probe")
 	}
 }
