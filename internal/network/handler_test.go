@@ -62,6 +62,29 @@ func TestHandleMouseMove(t *testing.T) {
 	}
 }
 
+func TestHandleMouseMoveClampsToRange(t *testing.T) {
+	mock := &MockInputDevice{}
+	h := &Handler{Mouse: mock, Keyboard: mock}
+
+	// Windows sends one pixel past the edge when the cursor is pushed into a corner
+	for _, tc := range []struct{ x, y, wantX, wantY int32 }{
+		{-34, -60, 0, 0},
+		{65569, 65595, 65535, 65535},
+		{100, 200, 100, 200},
+	} {
+		pkt := &protocol.Packet{Type: protocol.Mouse}
+		pkt.Mouse.X = tc.x
+		pkt.Mouse.Y = tc.y
+		pkt.Mouse.DwFlags = protocol.WM_MOUSEMOVE
+		h.HandlePacket(pkt)
+
+		got := mock.MouseMoves[len(mock.MouseMoves)-1]
+		if got.X != tc.wantX || got.Y != tc.wantY {
+			t.Errorf("move (%d,%d) = (%d,%d), want (%d,%d)", tc.x, tc.y, got.X, got.Y, tc.wantX, tc.wantY)
+		}
+	}
+}
+
 func TestHandleMouseButtons(t *testing.T) {
 	mock := &MockInputDevice{}
 	h := &Handler{Mouse: mock, Keyboard: mock}
