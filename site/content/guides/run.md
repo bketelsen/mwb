@@ -50,12 +50,22 @@ A Homebrew installation can use the [manual run](#manual-run); the cask has no s
 ## macOS LaunchAgent
 
 The repository supplies [packaging/com.mwb.agent.plist](https://github.com/bketelsen/mwb/blob/main/packaging/com.mwb.agent.plist).
-Its program path is `/usr/local/bin/mwb`. Install the binary there, or edit your local plist copy to use your installed binary's absolute path.
+Its program path is `/usr/local/bin/mwb`.
+Install the binary there, or edit your local plist copy to use your installed binary's absolute path.
 Then, from the source checkout:
 
 ```sh
 mkdir -p ~/Library/LaunchAgents
 cp packaging/com.mwb.agent.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.mwb.agent.plist
+```
+
+For a Homebrew installation, download the plist and set its program path before loading it:
+
+```sh
+mkdir -p ~/Library/LaunchAgents
+curl -fsSL -o ~/Library/LaunchAgents/com.mwb.agent.plist https://raw.githubusercontent.com/bketelsen/mwb/main/packaging/com.mwb.agent.plist
+plutil -replace ProgramArguments.0 -string "$(brew --prefix)/bin/mwb" ~/Library/LaunchAgents/com.mwb.agent.plist
 launchctl load ~/Library/LaunchAgents/com.mwb.agent.plist
 ```
 

@@ -64,7 +64,7 @@ docs/               engineering docs: adr/, design/, specs/, plans/
 
 /dev/uinput must be accessible. Requires:
 1. `uinput` kernel module loaded (`modprobe uinput`)
-2. udev rule: `KERNEL=="uinput", GROUP="input", MODE="0660"` in `/etc/udev/rules.d/99-uinput.rules`
+2. udev rule: `KERNEL=="uinput", GROUP="input", MODE="0660"` in `/etc/udev/rules.d/99-mwb.rules`
 3. User in `input` group
 
 ### macOS
