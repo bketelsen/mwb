@@ -23,7 +23,11 @@ builds:
       - arm64
 
 archives:
-  - formats:
+  - id: mwb
+    ids:
+      - mwb-linux
+      - mwb-darwin
+    formats:
       - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
@@ -56,8 +60,7 @@ nfpms:
 homebrew_casks:
   - name: mwb
     ids:
-      - mwb-linux
-      - mwb-darwin
+      - mwb
     repository:
       owner: bketelsen
       name: homebrew-tap
