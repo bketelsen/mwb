@@ -1,9 +1,10 @@
-.PHONY: build install uninstall clean fmt format-check tidy-check vet lint-version-check lint test race cross verify check ci vulncheck svu-version-check bump-main-check bump site site-serve
+.PHONY: build install uninstall clean fmt format-check tidy-check vet lint-version-check lint test race cross verify check ci vulncheck goreleaser-version goreleaser-version-check release-check svu-version-check bump-main-check bump site site-serve
 
 SYSTEMD_USER_DIR := $(HOME)/.config/systemd/user
 GO_FILES = $(shell git ls-files --cached --others --exclude-standard '*.go')
 GOLANGCI_LINT_VERSION := $(strip $(shell sed -n 's/^golangci-lint = "\(.*\)"/\1/p' mise.toml))
 SVU_VERSION := $(strip $(shell sed -n 's/^svu = "\(.*\)"/\1/p' mise.toml))
+GORELEASER_VERSION := $(strip $(shell sed -n 's/^"github:goreleaser\/goreleaser-pro" = "\(.*\)"/\1/p' mise.toml))
 GO_VERSION := $(strip $(shell sed -n 's/^go \([0-9.]*\)$$/\1/p' go.mod))
 
 build:
@@ -82,10 +83,28 @@ check: fmt verify
 
 # ci.yml runs `make ci`; vulncheck stays outside because it needs the network
 # (frostyard/core ADR-0083).
-ci: verify race build cross
+ci: verify race build cross release-check
 
 vulncheck:
 	go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+goreleaser-version:
+	@test -n "$(GORELEASER_VERSION)" || { echo "mise.toml pins no goreleaser-pro (install with: mise install)" >&2; exit 1; }
+	@printf 'v%s\n' "$(GORELEASER_VERSION)"
+
+goreleaser-version-check:
+	@test -n "$(GORELEASER_VERSION)" || { echo "mise.toml pins no goreleaser-pro (install with: mise install)"; exit 1; }
+	@installed="$$(goreleaser --version 2>/dev/null | sed -n 's/^GitVersion:[[:space:]]*//p')"; \
+	if [ "$$installed" != "$(GORELEASER_VERSION)" ]; then \
+		echo "expected goreleaser-pro $(GORELEASER_VERSION), found $${installed:-missing} (install with: mise install)"; exit 1; \
+	fi
+
+# --soft warns on deprecations (issue #20) but still fails on invalid config.
+release-check: goreleaser-version-check
+	goreleaser check --soft
+	@if goreleaser check --soft testdata/goreleaser-invalid.yml >/dev/null 2>&1; then \
+		echo "goreleaser check accepted testdata/goreleaser-invalid.yml"; exit 1; \
+	fi
 
 svu-version-check:
 	@test -n "$(SVU_VERSION)" || { echo "mise.toml pins no svu (install with: mise install)"; exit 1; }

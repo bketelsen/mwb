@@ -29,11 +29,17 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Read the GoReleaser pin
+        id: goreleaser-pin
+        run: |
+          version="$(make --no-print-directory -s goreleaser-version)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           distribution: goreleaser-pro
-          version: "~> v2"
+          version: ${{ steps.goreleaser-pin.outputs.version }}
           args: release --clean --split
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -69,11 +75,17 @@ jobs:
           pattern: dist-*
           merge-multiple: true
 
+      - name: Read the GoReleaser pin
+        id: goreleaser-pin
+        run: |
+          version="$(make --no-print-directory -s goreleaser-version)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Run GoReleaser Merge
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           distribution: goreleaser-pro
-          version: "~> v2"
+          version: ${{ steps.goreleaser-pin.outputs.version }}
           args: continue --merge
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -35,6 +35,9 @@ docs/               engineering docs: adr/, design/, specs/, plans/
   vet, gofmt check, the pinned golangci-lint and the tests. `make check` runs
   `make fmt`, then `make verify`. `make ci` adds the race tests and the
   builds.
+- `mise.toml` also pins GoReleaser Pro. `make ci` runs `make release-check`:
+  `goreleaser check --soft` with the pinned GoReleaser, plus a self-test on
+  `testdata/goreleaser-invalid.yml`.
 - Run `make check` before each commit and `make ci` before each push
   (frostyard/core ADR-0083). `.github/workflows/ci.yml` runs `make ci` on Linux
   and macOS. `make vulncheck` needs the network, so it stays outside `make ci`
@@ -82,6 +85,8 @@ Accessibility permission must be granted:
   (CGO off) and macOS (CGO on) in a split matrix, then merges and publishes the
   GitHub release, the deb and rpm packages and the `bketelsen/homebrew-tap`
   cask.
+- `release.yml` reads the GoReleaser pin with `make goreleaser-version`.
+  Bump GoReleaser only in `mise.toml`, then run `mise lock`.
 
 ## CI workflows
 
