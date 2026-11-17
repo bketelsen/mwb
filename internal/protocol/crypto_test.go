@@ -102,6 +102,12 @@ func TestChecksumAndMagic(t *testing.T) {
 // header, the random initial block and one stamped handshake packet.
 func peerStreamPrefix(t *testing.T, securityKey string, s Scheme) []byte {
 	t.Helper()
+	return peerStreamPrefixWithType(t, securityKey, s, Handshake)
+}
+
+// peerStreamPrefixWithType builds a peer stream with a stamped packet of pktType.
+func peerStreamPrefixWithType(t *testing.T, securityKey string, s Scheme, pktType PackageType) []byte {
+	t.Helper()
 	var buf bytes.Buffer
 	enc, err := NewSchemeEncryptWriter(&buf, securityKey, s)
 	if err != nil {
@@ -110,10 +116,14 @@ func peerStreamPrefix(t *testing.T, securityKey string, s Scheme) []byte {
 	if _, err := enc.Write(make([]byte, 16)); err != nil {
 		t.Fatal(err)
 	}
-	hs := &Packet{Type: Handshake, ID: 1, Src: 7}
-	hs.SetMachineName("WINHOST")
-	pkt := hs.Marshal()
-	StampPacket(pkt, Get24BitHash(securityKey))
+	p := &Packet{Type: pktType, ID: 1, Src: 7}
+	p.SetMachineName("WINHOST")
+	pkt := p.Marshal()
+	magic := Get24BitHash(securityKey)
+	StampPacket(pkt, magic)
+	if err := ValidatePacket(pkt, magic); err != nil {
+		t.Fatalf("invalid test packet: %v", err)
+	}
 	if _, err := enc.Write(pkt); err != nil {
 		t.Fatal(err)
 	}
@@ -158,6 +168,20 @@ func TestDetectScheme(t *testing.T) {
 			}
 			if pkt.Type != Handshake || pkt.MachineName() != "WINHOST" {
 				t.Errorf("packet = type %d name %q", pkt.Type, pkt.MachineName())
+			}
+		})
+	}
+}
+
+func TestDetectSchemeRequiresHandshake(t *testing.T) {
+	securityKey := "TestSecurityKey!!"
+	magic := Get24BitHash(securityKey)
+
+	for _, s := range []Scheme{SchemeLegacy, SchemeHeader50k, SchemeHeader100k} {
+		t.Run(s.String(), func(t *testing.T) {
+			prefix := peerStreamPrefixWithType(t, securityKey, s, Heartbeat)
+			if _, _, _, _, err := DetectScheme(prefix, securityKey, magic); err == nil {
+				t.Fatal("DetectScheme accepted a valid Heartbeat instead of a Handshake")
 			}
 		})
 	}
