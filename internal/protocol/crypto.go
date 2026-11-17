@@ -95,10 +95,10 @@ func DeriveSchemeKey(securityKey string, salt []byte, s Scheme) []byte {
 }
 
 // DetectScheme determines which scheme produced the start of a peer's stream
-// by decrypting its first packet and validating it against magic. prefix must
-// hold at least ProbeSize bytes. It returns the scheme, the AES key and the IV
-// for decrypting the peer's stream, and how many bytes of prefix precede the
-// cipher text.
+// by requiring its first packet to be a valid Handshake with matching magic
+// and checksum. prefix must hold at least ProbeSize bytes. It returns the
+// scheme, the AES key and the IV for decrypting the peer's stream, and how many
+// bytes of prefix precede the cipher text.
 func DetectScheme(prefix []byte, securityKey string, magic uint32) (s Scheme, key, iv []byte, offset int, err error) {
 	if len(prefix) < ProbeSize {
 		return 0, nil, nil, 0, fmt.Errorf("probe too short: %d bytes, need %d", len(prefix), ProbeSize)
@@ -111,7 +111,7 @@ func DetectScheme(prefix []byte, securityKey string, magic uint32) (s Scheme, ke
 		}
 		pt := make([]byte, aesBlockSize+PacketSize)
 		cipher.NewCBCDecrypter(block, iv).CryptBlocks(pt, ct[:len(pt)])
-		return ValidatePacket(pt[aesBlockSize:], magic) == nil
+		return PackageType(pt[aesBlockSize]) == Handshake && ValidatePacket(pt[aesBlockSize:], magic) == nil
 	}
 
 	salt, headerIV := prefix[:saltSize], prefix[saltSize:HeaderSize]
