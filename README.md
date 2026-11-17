@@ -4,7 +4,7 @@ A Linux and macOS client for [Microsoft PowerToys Mouse Without Borders](https:/
 
 ## Prerequisites
 
-- Go 1.25+
+- Go 1.27.4+ (the go line of go.mod)
 - A Windows machine running PowerToys Mouse Without Borders
 - **Linux:** uinput support, Wayland display
 - **macOS:** Accessibility permission granted to the mwb binary

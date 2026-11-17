@@ -2,6 +2,7 @@ package mwb_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"regexp"
@@ -42,37 +43,64 @@ func readRiskPaths(t *testing.T) []riskPath {
 	if len(list.Paths) == 0 {
 		t.Fatal("found 0 risk paths")
 	}
+	for _, p := range list.Paths {
+		if _, err := riskGlob(p.Glob); err != nil {
+			t.Fatalf("invalid risk-path glob %q: %v", p.Glob, err)
+		}
+	}
 	return list.Paths
 }
 
-// riskGlob anchors every glob at the root. ** matches any path; * stays
-// within 1 segment. A glob without a slash never matches a nested file.
-func riskGlob(glob string) *regexp.Regexp {
+// riskGlob anchors globs at the root, except ** alone matches every path.
+// **/ matches 0 or more segments; a trailing /** matches paths below a folder.
+// This gate refuses question marks, character classes, negation and braces.
+func riskGlob(glob string) (*regexp.Regexp, error) {
+	if strings.ContainsAny(glob, `?[!{}\`) {
+		return nil, fmt.Errorf("unsupported glob syntax")
+	}
+	segments := strings.Split(glob, "/")
+	for _, segment := range segments {
+		if segment == "" || segment == "." || segment == ".." {
+			return nil, fmt.Errorf("glob must have root-relative, non-empty segments")
+		}
+		if segment != "**" && strings.Contains(segment, "**") {
+			return nil, fmt.Errorf("** must be a whole segment")
+		}
+	}
 	var b strings.Builder
 	b.WriteString("^")
-	for i := 0; i < len(glob); i++ {
-		switch {
-		case strings.HasPrefix(glob[i:], "**"):
-			if strings.Contains(glob, "/") {
+	for i := 0; i < len(segments); i++ {
+		segment := segments[i]
+		if segment == "**" {
+			if i == len(segments)-1 {
 				b.WriteString(".*")
 			} else {
-				b.WriteString("[^/]*")
+				b.WriteString("(?:[^/]+/)*")
 			}
-			i++
-		case glob[i] == '*':
-			b.WriteString("[^/]*")
-		default:
-			b.WriteString(regexp.QuoteMeta(string(glob[i])))
+			continue
+		}
+		for _, char := range segment {
+			if char == '*' {
+				b.WriteString("[^/]*")
+			} else {
+				b.WriteString(regexp.QuoteMeta(string(char)))
+			}
+		}
+		if i < len(segments)-1 {
+			b.WriteString("/")
 		}
 	}
 	b.WriteString("$")
-	return regexp.MustCompile(b.String())
+	return regexp.Compile(b.String())
 }
 
 func riskCovered(paths []riskPath, file string) bool {
 	for _, p := range paths {
-		if (p.Level == "L1" || p.Level == "L2") && riskGlob(p.Glob).MatchString(file) {
-			return true
+		if p.Level == "L1" || p.Level == "L2" {
+			pattern, err := riskGlob(p.Glob)
+			if err == nil && pattern.MatchString(file) {
+				return true
+			}
 		}
 	}
 	return false
@@ -147,6 +175,13 @@ func TestRiskPathsCoverRequiredFiles(t *testing.T) {
 var riskMarker = regexp.MustCompile(`os\.Remove|RemoveAll|rm -rf|rm -f|systemctl|udevadm|usermod|modprobe|loginctl|DeriveKey|NewEncryptWriter|NewDecryptReader`)
 
 func TestRiskPathsCoverMarkerFiles(t *testing.T) {
+	inside, err := exec.Command("git", "rev-parse", "--is-inside-work-tree").CombinedOutput()
+	if err != nil || strings.TrimSpace(string(inside)) != "true" {
+		if os.Getenv("CI") == "" {
+			t.Skip("source tarball: no git work tree is available for the tracked-file marker scan")
+		}
+		t.Fatalf("CI requires a git work tree for the marker scan: %v; %s", err, inside)
+	}
 	paths := readRiskPaths(t)
 	files, err := exec.Command("git", "ls-files", "-z").Output()
 	if err != nil {
@@ -232,16 +267,28 @@ func TestRiskGlob(t *testing.T) {
 		{"packaging/**", "packaging-extra/postinstall.sh", false},
 		{"packaging/*.sh", "packaging/postinstall.sh", true},
 		{"packaging/*.sh", "packaging/scripts/postinstall.sh", false},
-		{"*.go", "main.go", true},
-		{"*.go", "cmd/main.go", false},
-		{"**", "cmd/main.go", false},
+		{"*.go", "a.go", true},
+		{"*.go", "cmd/a.go", false},
+		{"**", "cmd/mwb/main.go", true},
+		{"**/x.go", "x.go", true},
+		{"**/x.go", "a/b/x.go", true},
+		{"internal/**", "internal", false},
 		{"Makefile", "sub/Makefile", false},
 		{"a.go", "a_go", false},
 		{".github/workflows/**", ".github/workflows/ci.yml", true},
 	}
 	for _, tc := range cases {
-		if got := riskGlob(tc.glob).MatchString(tc.file); got != tc.want {
+		pattern, err := riskGlob(tc.glob)
+		if err != nil {
+			t.Fatalf("riskGlob(%q): %v", tc.glob, err)
+		}
+		if got := pattern.MatchString(tc.file); got != tc.want {
 			t.Errorf("riskGlob(%q) on %q = %v, want %v", tc.glob, tc.file, got, tc.want)
+		}
+	}
+	for _, glob := range []string{"a?.go", "[ab].go", "!a.go", "{a,b}.go", "/a.go", "./a.go", "a//b", "a/../b", "a**/b"} {
+		if _, err := riskGlob(glob); err == nil {
+			t.Errorf("riskGlob(%q) must refuse unsupported syntax", glob)
 		}
 	}
 }
