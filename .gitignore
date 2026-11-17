@@ -6,3 +6,6 @@
 
 # Local CI cross-builds
 /build/
+
+# Documentation site output
+/site/dist/

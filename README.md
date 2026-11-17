@@ -1,144 +1,50 @@
+<!-- readme-kind: tool -->
 # mwb
 
-A Linux and macOS client for [Microsoft PowerToys Mouse Without Borders](https://learn.microsoft.com/en-us/windows/powertoys/mouse-without-borders). Share your Windows keyboard and mouse with a Linux or macOS machine over the network.
+[![CI](https://github.com/bketelsen/mwb/actions/workflows/ci.yml/badge.svg)](https://github.com/bketelsen/mwb/actions/workflows/ci.yml)
 
-## Prerequisites
+mwb is a Linux and macOS client for people who use [Microsoft PowerToys Mouse Without Borders](https://learn.microsoft.com/en-us/windows/powertoys/mouse-without-borders) on Windows. Share the Windows machine's keyboard and mouse with your Linux or macOS machine over the network.
 
-- Go 1.27.4+ (the go line of go.mod)
-- A Windows machine running PowerToys Mouse Without Borders
-- **Linux:** uinput support, Wayland display
-- **macOS:** Accessibility permission granted to the mwb binary
+**Status:** pre-release. Linux needs uinput access, and macOS needs Accessibility permission.
 
-## Linux Setup
+**Documentation:** [bketelsen.github.io/mwb](https://bketelsen.github.io/mwb/)
 
-Before running mwb on Linux, you need to configure uinput access:
+## What it does
 
-```bash
-# Load the uinput kernel module
-sudo modprobe uinput
+- **Receive keyboard and mouse input.** Control Linux or macOS from the Windows machine. [How it works](https://bketelsen.github.io/mwb/concepts/how-it-works/)
+- **Run at login.** Use a systemd user service on Linux or a LaunchAgent on macOS. [Run mwb](https://bketelsen.github.io/mwb/guides/run/)
 
-# Load uinput automatically on boot
-echo 'uinput' | sudo tee /etc/modules-load.d/uinput.conf
+## Install
 
-# Allow the input group to access /dev/uinput
-echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger /dev/uinput
-
-# Add your user to the input group (log out and back in after this)
-sudo usermod -aG input $USER
-```
-
-## macOS Setup
-
-mwb needs Accessibility permission to inject mouse and keyboard events:
-
-1. Build or install the `mwb` binary
-2. Run it once — macOS will prompt for Accessibility access
-3. Grant permission in **System Settings > Privacy & Security > Accessibility**
-
-If running from Terminal, you may need to grant the permission to Terminal.app instead.
-
-## Installation
-
-### Homebrew (Linux and macOS) - Experimental
-
-```bash
+```sh
 brew tap bketelsen/tap
-brew install mwb
+brew install --cask bketelsen/tap/mwb
 ```
 
-To start `mwb` automatically on login:
+The [install guide](https://bketelsen.github.io/mwb/getting-started/install/) covers release packages, source builds, updates, and platform requirements.
 
-```bash
-brew services start mwb
+## Use
+
+First, complete [Linux setup](https://bketelsen.github.io/mwb/getting-started/linux/) or [macOS setup](https://bketelsen.github.io/mwb/getting-started/macos/). Create `~/.config/mwb/config.toml` with your Windows host and PowerToys security key as the [configuration guide](https://bketelsen.github.io/mwb/guides/configuration/) shows. Then run:
+
+```sh
+mwb
 ```
 
-On macOS you must grant Accessibility permissions after installing:
+In PowerToys Mouse Without Borders, select **Refresh connections** and place the client in the device layout. [Run mwb](https://bketelsen.github.io/mwb/guides/run/) explains services, flags, and logs.
 
-> System Settings → Privacy & Security → Accessibility → Add `mwb`
+## Develop
 
-### Linux (deb/rpm)
-
-Download the latest `.deb` or `.rpm` from the [releases page](https://github.com/bketelsen/mwb/releases).
-
-### Linux (from source)
-
-```bash
-make install
+```sh
+mise install   # the pinned tools
+make ci        # the local CI gate
 ```
 
-This builds the binary, installs it to `~/go/bin/mwb`, and sets up a systemd user service.
+[Build from source](https://bketelsen.github.io/mwb/contributing/build/) explains the build, checks, and site targets.
 
-### macOS (manual)
+## Where to go next
 
-```bash
-make build
-cp mwb /usr/local/bin/mwb
-```
-
-## Configuration
-
-Create `~/.config/mwb/config.toml`:
-
-```toml
-host = "192.168.1.100"   # IP of the Windows machine
-key = "YourSecurityKey"   # Must match the key set in PowerToys MWB
-name = "linux"            # Name shown in the MWB device layout (max 15 chars)
-# port = 15100            # Base port (default: 15100, message port = base + 1)
-```
-
-The security key is found in PowerToys > Mouse Without Borders > Security key.
-
-## Usage
-
-### Linux: systemd service (recommended)
-
-```bash
-systemctl --user enable --now mwb
-```
-
-View logs:
-
-```bash
-journalctl --user -u mwb -f
-```
-
-To uninstall:
-
-```bash
-make uninstall
-```
-
-### macOS: LaunchAgent (recommended)
-
-```bash
-cp packaging/com.mwb.agent.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.mwb.agent.plist
-```
-
-This starts mwb at login and restarts it on failure. View logs:
-
-```bash
-tail -f /tmp/mwb.log
-tail -f /tmp/mwb.err.log
-```
-
-To stop and unload:
-
-```bash
-launchctl unload ~/Library/LaunchAgents/com.mwb.agent.plist
-```
-
-### Manual
-
-```bash
-mwb                          # uses default config path
-mwb -config /path/to/config  # custom config path
-mwb -debug                   # enable debug logging
-```
-
-On the Windows side, open PowerToys Mouse Without Borders and click "Refresh connections" to discover the Linux client. Then drag it into your desired position in the device layout.
-
-## How It Works
-
-mwb connects to the Windows MWB server over TCP, performs an AES-256-CBC encrypted handshake, and receives mouse/keyboard events which it injects locally via Linux uinput virtual devices or macOS CoreGraphics events.
+- [AGENTS.md](AGENTS.md): the rules for agents and contributors.
+- [docs/README.md](docs/README.md): the decisions, designs, specs, and plans.
+- [SECURITY.md](SECURITY.md): report a vulnerability privately.
+- [LICENSE](LICENSE): MIT.

@@ -1,4 +1,4 @@
-.PHONY: build install uninstall clean fmt format-check tidy-check vet lint-version-check lint test race cross verify check ci vulncheck svu-version-check bump-main-check bump
+.PHONY: build install uninstall clean fmt format-check tidy-check vet lint-version-check lint test race cross verify check ci vulncheck svu-version-check bump-main-check bump site site-serve
 
 SYSTEMD_USER_DIR := $(HOME)/.config/systemd/user
 GO_FILES = $(shell git ls-files --cached --others --exclude-standard '*.go')
@@ -109,3 +109,18 @@ bump:
 		git tag -a "$$version" -m "Version $$version"; \
 		echo "Tagged $$version; pushing it to origin"; \
 		git push origin "$$version"
+
+# The documentation site (site/), built with pinned ProperDocs and MaterialX.
+SITE_VENV := build/site-venv
+
+$(SITE_VENV)/bin/properdocs: site/requirements.txt
+	python3 -m venv $(SITE_VENV)
+	$(SITE_VENV)/bin/pip install -q --require-hashes -r site/requirements.txt
+	touch $@
+
+site: $(SITE_VENV)/bin/properdocs
+	$(SITE_VENV)/bin/properdocs build --strict -f site/properdocs.yml
+
+site-serve: $(SITE_VENV)/bin/properdocs
+	$(SITE_VENV)/bin/properdocs serve -f site/properdocs.yml
+
