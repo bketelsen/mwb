@@ -2,6 +2,7 @@
 package network
 
 import (
+	"math"
 	"testing"
 
 	"github.com/bketelsen/mwb/internal/input"
@@ -82,6 +83,78 @@ func TestHandleMouseMoveClampsToRange(t *testing.T) {
 		if got.X != tc.wantX || got.Y != tc.wantY {
 			t.Errorf("move (%d,%d) = (%d,%d), want (%d,%d)", tc.x, tc.y, got.X, got.Y, tc.wantX, tc.wantY)
 		}
+	}
+}
+
+func TestClampAbs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		v    int32
+		want int32
+	}{
+		{"zero", 0, 0},
+		{"maximum", 65535, 65535},
+		{"below_zero", -1, 0},
+		{"above_maximum", 65536, 65535},
+		{"minimum_int32", math.MinInt32, 0},
+		{"maximum_int32", math.MaxInt32, 65535},
+		{"in_range", 32768, 32768},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := clampAbs(tc.v); got != tc.want {
+				t.Errorf("clampAbs(%d) = %d, want %d", tc.v, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestHandleMouseMoveClampsMixedAxes(t *testing.T) {
+	for _, tc := range []struct {
+		name               string
+		x, y, wantX, wantY int32
+	}{
+		{"x_in_range", 32768, 70000, 32768, 65535},
+		{"y_in_range", -5, 16384, 0, 16384},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mock := &MockInputDevice{}
+			h := &Handler{Mouse: mock, Keyboard: mock}
+			pkt := &protocol.Packet{Type: protocol.Mouse}
+			pkt.Mouse.X = tc.x
+			pkt.Mouse.Y = tc.y
+			pkt.Mouse.DwFlags = protocol.WM_MOUSEMOVE
+
+			h.HandlePacket(pkt)
+
+			if len(mock.MouseMoves) != 1 {
+				t.Fatalf("expected 1 move, got %d", len(mock.MouseMoves))
+			}
+			got := mock.MouseMoves[0]
+			if got.X != tc.wantX || got.Y != tc.wantY {
+				t.Errorf("move = (%d,%d), want (%d,%d)", got.X, got.Y, tc.wantX, tc.wantY)
+			}
+		})
+	}
+}
+
+func TestHandleMouseButtonClampsMove(t *testing.T) {
+	mock := &MockInputDevice{}
+	h := &Handler{Mouse: mock, Keyboard: mock}
+	pkt := &protocol.Packet{Type: protocol.Mouse}
+	pkt.Mouse.X = -5
+	pkt.Mouse.Y = 70000
+	pkt.Mouse.DwFlags = protocol.WM_LBUTTONDOWN
+
+	h.HandlePacket(pkt)
+
+	if len(mock.MouseMoves) != 1 {
+		t.Fatalf("expected 1 move, got %d", len(mock.MouseMoves))
+	}
+	if got := mock.MouseMoves[0]; got.X != 0 || got.Y != 65535 {
+		t.Errorf("move = (%d,%d), want (0,65535)", got.X, got.Y)
+	}
+	if len(mock.ButtonDowns) != 1 || mock.ButtonDowns[0] != input.BTN_LEFT {
+		t.Errorf("expected BTN_LEFT down, got %v", mock.ButtonDowns)
 	}
 }
 
