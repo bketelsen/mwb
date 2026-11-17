@@ -1,0 +1,101 @@
+# yaml-language-server: $schema=https://jaywhj.github.io/mkdocs-materialx/schema.json
+# The mwb documentation site: ProperDocs with the MaterialX theme.
+# `make site` builds it into site/dist; `make site-serve` previews it at
+# http://127.0.0.1:8000/mwb/.
+
+site_name: mwb
+site_url: https://bketelsen.github.io/mwb/
+site_description: A Linux and macOS client for PowerToys Mouse Without Borders.
+copyright: mwb is MIT licensed.
+
+repo_name: bketelsen/mwb
+repo_url: https://github.com/bketelsen/mwb
+edit_uri: edit/main/site/content/
+
+docs_dir: content
+site_dir: dist
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+nav:
+  - Home: index.md
+  - Get started:
+      - Install: getting-started/install.md
+      - Linux setup: getting-started/linux.md
+      - macOS setup: getting-started/macos.md
+  - Guides:
+      - Configuration: guides/configuration.md
+      - Run mwb: guides/run.md
+  - Concepts:
+      - How mwb works: concepts/how-it-works.md
+  - Contributing:
+      - Build from source: contributing/build.md
+
+theme:
+  name: materialx
+  language: en
+  font: false
+  # Frostyard surfaces are solid; no frosted-glass header.
+  topbar_style: primary
+  palette:
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - content.action.edit
+    - content.code.copy
+    - navigation.footer
+    - navigation.sections
+    - navigation.tabs
+    - search.highlight
+    - search.share
+    - toc.follow
+
+plugins:
+  - search
+
+extra_css:
+  - stylesheets/frostyard.css
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/bketelsen/mwb
+      name: mwb on GitHub
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
