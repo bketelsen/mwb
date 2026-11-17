@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -174,6 +175,84 @@ func TestRiskPathsCoverRequiredFiles(t *testing.T) {
 
 var riskMarker = regexp.MustCompile(`os\.Remove|RemoveAll|rm -rf|rm -f|systemctl|udevadm|usermod|modprobe|loginctl|DeriveKey|NewEncryptWriter|NewDecryptReader`)
 
+// instructionAliases are the committed symlinks to AGENTS.md (frostyard/core ADR-0018). The marker scan reads AGENTS.md under its own name.
+var instructionAliases = map[string]string{
+	"CLAUDE.md":                       "AGENTS.md",
+	"GEMINI.md":                       "AGENTS.md",
+	".cursorrules":                    "AGENTS.md",
+	".github/copilot-instructions.md": "../AGENTS.md",
+}
+
+func riskScanSkip(file string) (bool, error) {
+	if file == "" || strings.HasSuffix(file, ".md") || strings.HasSuffix(file, "_test.go") || strings.HasPrefix(file, "docs/") {
+		return true, nil
+	}
+	target, alias := instructionAliases[file]
+	if !alias {
+		return false, nil
+	}
+	info, err := os.Lstat(file)
+	if err != nil {
+		return false, err
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		return false, nil
+	}
+	actual, err := os.Readlink(file)
+	if err != nil {
+		return false, err
+	}
+	// Skip only the verified instruction aliases.
+	return actual == target, nil
+}
+
+func TestRiskScanSkipOnlyVerifiedAliases(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if err := os.Mkdir(".github", 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range []string{"AGENTS.md", "untracked.txt"} {
+		if err := os.WriteFile(file, []byte("modprobe"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	outside := filepath.Join(t.TempDir(), "external.txt")
+	if err := os.WriteFile(outside, []byte("modprobe"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, file, target string
+		want               bool
+	}{
+		{"verified alias", ".cursorrules", "AGENTS.md", true},
+		{"markdown alias", ".github/copilot-instructions.md", "../AGENTS.md", true},
+		{"wrong target", ".cursorrules", "untracked.txt", false},
+		{"regular alias", ".cursorrules", "", false},
+		{"untracked target", "scripts-setup", "untracked.txt", false},
+		{"outside target", "outside", outside, false},
+		{"dangling target", "dangling", "missing.txt", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := os.Remove(tc.file); err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+			if tc.target == "" {
+				if err := os.WriteFile(tc.file, []byte("modprobe"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.Symlink(tc.target, tc.file); err != nil {
+				t.Fatal(err)
+			}
+			if skip, err := riskScanSkip(tc.file); err != nil {
+				t.Fatal(err)
+			} else if skip != tc.want {
+				t.Errorf("riskScanSkip(%q) = %v, want %v", tc.file, skip, tc.want)
+			}
+		})
+	}
+}
+
 func TestRiskPathsCoverMarkerFiles(t *testing.T) {
 	inside, err := exec.Command("git", "rev-parse", "--is-inside-work-tree").CombinedOutput()
 	if err != nil || strings.TrimSpace(string(inside)) != "true" {
@@ -192,9 +271,20 @@ func TestRiskPathsCoverMarkerFiles(t *testing.T) {
 		"internal/input/uinput.go": "setup hints in error messages; they run no command",
 	}
 	hits := map[string]bool{}
-	checked := 0
+	checked, aliases := 0, 0
 	for _, file := range strings.Split(string(files), "\x00") {
-		if file == "" || strings.HasSuffix(file, ".md") || strings.HasSuffix(file, "_test.go") || strings.HasPrefix(file, "docs/") {
+		skip, err := riskScanSkip(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if skip {
+			if target, alias := instructionAliases[file]; alias {
+				if info, err := os.Lstat(file); err == nil && info.Mode()&os.ModeSymlink != 0 {
+					if actual, err := os.Readlink(file); err == nil && actual == target {
+						aliases++
+					}
+				}
+			}
 			continue
 		}
 		data, err := os.ReadFile(file)
@@ -214,6 +304,9 @@ func TestRiskPathsCoverMarkerFiles(t *testing.T) {
 			t.Errorf("%s has a risk marker but no L1 or L2 risk-path glob matches", file)
 		}
 	}
+	if aliases != len(instructionAliases) {
+		t.Errorf("expected %d verified instruction aliases; found %d", len(instructionAliases), aliases)
+	}
 	if checked == 0 || len(hits) == 0 {
 		t.Fatalf("checked %d files and found %d marker files; neither may be 0", checked, len(hits))
 	}
@@ -222,7 +315,7 @@ func TestRiskPathsCoverMarkerFiles(t *testing.T) {
 			t.Errorf("remove unused exemption for %s: no marker hit", file)
 		}
 	}
-	t.Logf("scanned %d files; checked %d marker files", checked, len(hits))
+	t.Logf("scanned %d files; skipped %d instruction aliases; checked %d marker files", checked, aliases, len(hits))
 }
 
 func TestRiskPathsNegativeControl(t *testing.T) {

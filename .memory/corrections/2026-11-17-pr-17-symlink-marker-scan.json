@@ -1,0 +1,7 @@
+{
+  "date": "2026-11-17",
+  "scope": "tests",
+  "correction": "A tracked-file scan must not read an instruction alias as its own file, and must not skip other symlinks: the risk marker scan in risk_paths_test.go skips only the 4 verified symlinks to AGENTS.md, and scans every other symlink through its target.",
+  "evidence": "bketelsen/mwb#17, cross-review of head fb01f97: .cursorrules (a symlink to AGENTS.md) failed TestRiskPathsCoverMarkerFiles on its kernel module setup hint",
+  "promoted_to": "risk_paths_test.go"
+}
