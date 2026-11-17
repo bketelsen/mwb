@@ -1,0 +1,4 @@
+# Self-test fixture of make release-check.
+version: 2
+builds:
+  - bogus_field: true

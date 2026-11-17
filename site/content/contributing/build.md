@@ -10,10 +10,11 @@ The source build needs Go 1.27.4 or newer (the `go` line of `go.mod`). macOS bui
 Use [mise](https://mise.jdx.dev) for the repository's pinned contributor tools.
 
 ```sh
-mise install  # the pinned tools
-make ci       # the local CI gate
-make check    # format, lint, and test
-make build    # writes ./mwb
+mise install        # the pinned tools
+make ci             # the local CI gate
+make check          # format, lint, and test
+make release-check  # check the GoReleaser config
+make build          # writes ./mwb
 ```
 
 Run `make ci` before a push and `make check` before a commit.

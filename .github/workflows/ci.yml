@@ -33,7 +33,7 @@ jobs:
       - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
         with:
           install: true
-          install_args: golangci-lint
+          install_args: golangci-lint github:goreleaser/goreleaser-pro
           cache: true
 
       - run: make ci

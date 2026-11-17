@@ -11,3 +11,6 @@ lockfile = true
 golangci-lint = "2.15.0"
 # make bump: the next version from conventional commits, per .svu.yml.
 svu = "3.4.1"
+# make release-check, and so make ci; release.yml reads this pin through
+# make goreleaser-version, so CI checks the config with the release's GoReleaser.
+"github:goreleaser/goreleaser-pro" = "2.20.2"
