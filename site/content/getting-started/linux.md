@@ -22,7 +22,7 @@ The deb/rpm packages supply `/usr/lib/udev/rules.d/99-mwb.rules`.
 For a source or Homebrew installation, create a local rule:
 
 ```sh
-echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
+echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-mwb.rules
 ```
 
 Reload the rules and add your account to the `input` group:

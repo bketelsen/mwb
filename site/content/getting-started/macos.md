@@ -18,4 +18,4 @@ CGO_ENABLED=1 make build
 ```
 
 Next, [configure mwb](../guides/configuration.md) and [run it](../guides/run.md).
-The supplied [LaunchAgent instructions](../guides/run.md#macos-launchagent) use `/usr/local/bin/mwb`.
+The supplied LaunchAgent uses `/usr/local/bin/mwb`; Homebrew installations need the path change in [Run mwb](../guides/run.md#macos-launchagent).

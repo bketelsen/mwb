@@ -21,6 +21,7 @@ brew install --cask bketelsen/tap/mwb
 
 Complete [Linux setup](linux.md) or [macOS setup](macos.md) after installation.
 Use the [manual run instructions](../guides/run.md#manual-run) first.
+For a Homebrew installation on macOS, follow the [LaunchAgent instructions](../guides/run.md#macos-launchagent) to start mwb at login.
 
 ### Update
 
@@ -34,14 +35,16 @@ Stop the running client before the update, then start it again with your existin
 ## Linux deb/rpm packages
 
 Download the package for your architecture from [GitHub releases](https://github.com/bketelsen/mwb/releases).
-Run the command for your system in the folder that holds the file you downloaded:
+Use the single file name you downloaded in the command for your system.
+The name contains the version and architecture: `amd64` or `arm64` for deb, and `x86_64` or `aarch64` for rpm.
+For example, run these commands for the matching v0.2.6 package in the folder that holds it:
 
 ```sh
 # Debian-based systems
-sudo apt install ./mwb_*.deb
+sudo apt install ./mwb_0.2.6_amd64.deb
 
 # RPM-based systems
-sudo rpm -Uvh ./mwb-*.rpm
+sudo rpm -Uvh ./mwb-0.2.6-1.x86_64.rpm
 ```
 
 The packages install the binary at `/usr/bin/mwb`, a systemd user unit at `/usr/lib/systemd/user/mwb.service`, and a udev rule at `/usr/lib/udev/rules.d/99-mwb.rules`.
@@ -50,7 +53,8 @@ Then [configure mwb](../guides/configuration.md) and [start the user service](..
 
 ### Update
 
-Download the newer package from GitHub releases and repeat the matching package command above.
+Download the newer package from GitHub releases.
+Repeat the matching package command above with the single file name of the new package.
 Then restart the client:
 
 ```sh

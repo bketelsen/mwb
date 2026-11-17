@@ -4,8 +4,18 @@ package input
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
+
+func TestUinputSetupHint(t *testing.T) {
+	if !strings.Contains(uinputSetupHint, "sudo tee /etc/udev/rules.d/99-mwb.rules") {
+		t.Error("setup hint must use the mwb udev rule name")
+	}
+	if strings.Contains(uinputSetupHint, "99-"+"uinput.rules") {
+		t.Error("setup hint must not use the old udev rule name")
+	}
+}
 
 func canAccessUinput(t *testing.T) {
 	t.Helper()
