@@ -1,0 +1,24 @@
+# PR triage caller (frostyard/core ADR-0068, ADR-0077, ADR-0078; core
+# docs/specs/pr-triage.md): runs core's reusable PR triage workflow on every
+# pull request. It adds the level label (level:L1 to level:L4, from
+# .github/risk-paths.json at the base) and risk:high for L1 and L2, removes
+# ready-for-human when the head moves or CI is not green when the label comes,
+# and writes the Dependabot shadow comment. pull_request_target runs the base
+# list and this trusted caller; it checks out nothing and runs no PR code.
+# The job id must stay pr-triage: the readiness step leaves out check runs
+# whose name starts with pr-triage. It is not a required check and has no
+# merge_group trigger.
+name: PR triage
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, labeled]
+
+permissions: {}
+
+jobs:
+  pr-triage:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: frostyard/core/.github/workflows/pr-triage.yml@db33e54eae08dc1f3a414b7fc7e504a7da16b920 # frostyard/core main, 2026-11-17; core has no release tags

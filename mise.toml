@@ -1,0 +1,13 @@
+# Tool pins for this repository (frostyard/core ADR-0043).
+# Go comes from go.mod: never pin it here. mise reads go.mod through
+# idiomatic_version_file_enable_tools, and setup-go reads it in CI.
+# mise.lock carries each tool's checksums; `mise install` provisions them.
+[settings]
+idiomatic_version_file_enable_tools = ["go"]
+lockfile = true
+
+[tools]
+# make lint, and so make verify and make ci; the Makefile checks this release.
+golangci-lint = "2.15.0"
+# make bump: the next version from conventional commits, per .svu.yml.
+svu = "3.4.1"

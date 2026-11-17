@@ -3,3 +3,6 @@
 
 # GoReleaser output
 /dist/
+
+# Local CI cross-builds
+/build/

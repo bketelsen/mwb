@@ -3,7 +3,7 @@
 package input
 
 /*
-#cgo LDFLAGS: -framework CoreGraphics
+#cgo LDFLAGS: -framework CoreGraphics -framework CoreFoundation
 
 #include <CoreGraphics/CoreGraphics.h>
 
