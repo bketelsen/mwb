@@ -1,0 +1,23 @@
+{
+  "schema_version": 2,
+  "default_level": "L3",
+  "paths": [
+    {"glob": ".github/risk-paths.json", "level": "L2", "why": "governance: the high-risk path list"},
+    {"glob": ".github/workflows/**", "level": "L2", "why": "governance: CI, release, the PR triage caller and token permissions"},
+    {"glob": ".github/dependabot.yml", "level": "L2", "why": "supply chain: the dependency update policy"},
+    {"glob": "Makefile", "level": "L2", "why": "governance: the verify gate, make bump and the install targets"},
+    {"glob": ".golangci.yml", "level": "L2", "why": "governance: the lint rules of the gate"},
+    {"glob": "mise.toml", "level": "L1", "why": "supply chain: the tool pins that CI installs, checked against mise.lock"},
+    {"glob": "mise.lock", "level": "L1", "why": "supply chain: the checksums of the tools that CI installs"},
+    {"glob": "go.mod", "level": "L1", "why": "supply chain: the module requirements and the Go release"},
+    {"glob": "go.sum", "level": "L1", "why": "supply chain: the module checksums"},
+    {"glob": ".svu.yml", "level": "L1", "why": "publication: the version configuration for release tags"},
+    {"glob": ".goreleaser.yml", "level": "L1", "why": "publication: the builds, packages and Homebrew cask that GoReleaser publishes"},
+    {"glob": "packaging/**", "level": "L1", "why": "publication: the package scripts that run as root, the udev rule and the service units"},
+    {"glob": "mwb.service", "level": "L1", "why": "publication: the systemd user unit that make install installs"},
+    {"glob": "internal/protocol/crypto.go", "level": "L1", "why": "auth: derives the session key from the shared security key"},
+    {"glob": "internal/protocol/stream.go", "level": "L1", "why": "auth: the encrypted stream to the peer"},
+    {"glob": "internal/network/client.go", "level": "L1", "why": "auth: the handshake that admits the peer"},
+    {"glob": "internal/config/**", "level": "L1", "why": "secrets and credentials: reads the security key from the config file"}
+  ]
+}
