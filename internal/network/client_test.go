@@ -2,10 +2,14 @@
 package network
 
 import (
+	"bytes"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -168,5 +172,179 @@ func TestConnectWrongKey(t *testing.T) {
 	_, err = Connect(ln.Addr().String(), "ClientSecurityKey", "linux-test", 5*time.Second)
 	if err == nil {
 		t.Fatal("Connect succeeded with mismatched security key")
+	}
+}
+
+func TestSetupTimesOutWhenPeerStopsReading(t *testing.T) {
+	oldTimeout := setupTimeout
+	setupTimeout = 200 * time.Millisecond
+	t.Cleanup(func() { setupTimeout = oldTimeout })
+
+	raw, peer := net.Pipe()
+	t.Cleanup(func() { _ = raw.Close() })
+	t.Cleanup(func() { _ = peer.Close() })
+
+	const securityKey = "TestSecurityKey!!"
+	var preamble bytes.Buffer
+	enc, err := protocol.NewSchemeEncryptWriter(&preamble, securityKey, protocol.SchemeLegacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := enc.Write(make([]byte, 16)); err != nil {
+		t.Fatal(err)
+	}
+	magic := protocol.Get24BitHash(securityKey)
+	for i := 0; i < 10; i++ {
+		hs := &protocol.Packet{Type: protocol.Handshake, ID: int32(i + 1), Src: 7}
+		hs.SetMachineName("WINHOST")
+		buf := hs.Marshal()
+		protocol.StampPacket(buf, magic)
+		if _, err := enc.Write(buf); err != nil {
+			t.Fatal(err)
+		}
+	}
+	go func() { _, _ = peer.Write(preamble.Bytes()) }()
+
+	result := make(chan error, 1)
+	go func() {
+		_, err := setup(raw, securityKey, "linux-test")
+		result <- err
+	}()
+	select {
+	case err := <-result:
+		if !errors.Is(err, os.ErrDeadlineExceeded) {
+			t.Fatalf("setup error = %v, want deadline exceeded", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("setup did not time out within 2 seconds")
+	}
+}
+
+func TestSetupTimesOutWhenPeerSendsNothing(t *testing.T) {
+	oldTimeout := setupTimeout
+	setupTimeout = 200 * time.Millisecond
+	t.Cleanup(func() { setupTimeout = oldTimeout })
+
+	raw, peer := net.Pipe()
+	t.Cleanup(func() { _ = raw.Close() })
+	t.Cleanup(func() { _ = peer.Close() })
+	go func() { _, _ = io.Copy(io.Discard, peer) }()
+
+	result := make(chan error, 1)
+	go func() {
+		_, err := setup(raw, "TestSecurityKey!!", "linux-test")
+		result <- err
+	}()
+	select {
+	case err := <-result:
+		if !errors.Is(err, os.ErrDeadlineExceeded) {
+			t.Fatalf("setup error = %v, want deadline exceeded", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("setup did not time out within 2 seconds")
+	}
+}
+
+// queuedSetupPeer provides the write buffering that runFakeServer expects from
+// a TCP socket. The underlying net.Pipe still blocks reads and writes normally.
+// lastWrite preserves the CBC chaining block for a packet after runFakeServer.
+type queuedSetupPeer struct {
+	net.Conn
+	writes    chan []byte
+	done      <-chan struct{}
+	lastWrite []byte
+}
+
+func (p *queuedSetupPeer) Write(buf []byte) (int, error) {
+	data := bytes.Clone(buf)
+	select {
+	case p.writes <- data:
+		p.lastWrite = data
+		return len(buf), nil
+	case <-p.done:
+		return 0, net.ErrClosed
+	}
+}
+
+type deadlineRecordingConn struct {
+	net.Conn
+	mu        sync.Mutex
+	deadlines []time.Time
+}
+
+func (c *deadlineRecordingConn) SetDeadline(deadline time.Time) error {
+	c.mu.Lock()
+	c.deadlines = append(c.deadlines, deadline)
+	c.mu.Unlock()
+	return c.Conn.SetDeadline(deadline)
+}
+
+func TestSetupClearsDeadline(t *testing.T) {
+	raw, peer := net.Pipe()
+	recorded := &deadlineRecordingConn{Conn: raw}
+	t.Cleanup(func() { _ = raw.Close() })
+	t.Cleanup(func() { _ = peer.Close() })
+	done := make(chan struct{})
+	t.Cleanup(func() { close(done) })
+	server := &queuedSetupPeer{Conn: peer, writes: make(chan []byte, 16), done: done}
+	go func() {
+		for {
+			select {
+			case buf := <-server.writes:
+				if _, err := peer.Write(buf); err != nil {
+					return
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
+
+	const securityKey = "TestSecurityKey!!"
+	serverDone := make(chan error, 1)
+	go func() {
+		serverDone <- runFakeServer(server, securityKey, protocol.SchemeLegacy)
+		_, _ = io.Copy(io.Discard, peer)
+	}()
+
+	c, err := setup(recorded, securityKey, "linux-test")
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := <-serverDone; err != nil {
+		t.Fatalf("server: %v", err)
+	}
+
+	recorded.mu.Lock()
+	deadlines := append([]time.Time(nil), recorded.deadlines...)
+	recorded.mu.Unlock()
+	if len(deadlines) < 2 {
+		t.Fatalf("SetDeadline calls = %d, want at least 2", len(deadlines))
+	}
+	if deadlines[0].IsZero() {
+		t.Fatal("first SetDeadline argument is zero, want a setup deadline")
+	}
+	if !deadlines[len(deadlines)-1].IsZero() {
+		t.Fatalf("last SetDeadline argument = %v, want zero", deadlines[len(deadlines)-1])
+	}
+
+	// Continue the legacy CBC stream from the server's final ciphertext block.
+	iv := server.lastWrite[len(server.lastWrite)-16:]
+	enc, err := protocol.NewEncryptWriter(server, protocol.DeriveKey(securityKey), iv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkt := &protocol.Packet{Type: protocol.HeartbeatEx, ID: 12, Src: 7}
+	buf := pkt.Marshal()
+	protocol.StampPacket(buf, protocol.Get24BitHash(securityKey))
+	if _, err := enc.Write(buf); err != nil {
+		t.Fatal(err)
+	}
+	got, err := c.RecvPacket()
+	if err != nil {
+		t.Fatalf("RecvPacket after setup deadline: %v", err)
+	}
+	if got.Type != pkt.Type || got.ID != pkt.ID {
+		t.Fatalf("packet = %+v, want type %d and ID %d", got, pkt.Type, pkt.ID)
 	}
 }
