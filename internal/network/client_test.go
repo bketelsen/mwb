@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -177,7 +178,7 @@ func TestConnectWrongKey(t *testing.T) {
 
 func TestSetupTimesOutWhenPeerStopsReading(t *testing.T) {
 	oldTimeout := setupTimeout
-	setupTimeout = 200 * time.Millisecond
+	setupTimeout = 1 * time.Second
 	t.Cleanup(func() { setupTimeout = oldTimeout })
 
 	raw, peer := net.Pipe()
@@ -215,8 +216,11 @@ func TestSetupTimesOutWhenPeerStopsReading(t *testing.T) {
 		if !errors.Is(err, os.ErrDeadlineExceeded) {
 			t.Fatalf("setup error = %v, want deadline exceeded", err)
 		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("setup did not time out within 2 seconds")
+		if !strings.Contains(err.Error(), "send IV block") {
+			t.Fatalf("setup error = %v, want the send IV block path", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("setup did not time out within 5 seconds")
 	}
 }
 
