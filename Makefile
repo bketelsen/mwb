@@ -102,8 +102,12 @@ goreleaser-version-check:
 # --soft warns on deprecations (issue #20) but still fails on invalid config.
 release-check: goreleaser-version-check
 	goreleaser check --soft
-	@if goreleaser check --soft testdata/goreleaser-invalid.yml >/dev/null 2>&1; then \
+	@if output="$$(goreleaser check --soft testdata/goreleaser-invalid.yml 2>&1)"; then \
+		printf '%s\n' "$$output"; \
 		echo "goreleaser check accepted testdata/goreleaser-invalid.yml"; exit 1; \
+	elif ! printf '%s\n' "$$output" | grep -Fq 'bogus_field'; then \
+		printf '%s\n' "$$output"; \
+		echo "goreleaser check did not reject bogus_field in testdata/goreleaser-invalid.yml"; exit 1; \
 	fi
 
 svu-version-check:

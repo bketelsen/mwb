@@ -1,6 +1,7 @@
 package mwb_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,9 +19,15 @@ func TestGoReleaserVersion(t *testing.T) {
 	if len(pins) != 1 {
 		t.Fatalf("expected 1 exact GoReleaser Pro pin, found %d", len(pins))
 	}
-	output, err := exec.Command("make", "--no-print-directory", "-s", "goreleaser-version").CombinedOutput()
+	cmd := exec.Command("make", "--no-print-directory", "-s", "goreleaser-version")
+	cmd.Env = goReleaserMakeEnv()
+	output, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("make goreleaser-version: %v\n%s", err, output)
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			t.Fatalf("make goreleaser-version: %v\n%s", err, exitErr.Stderr)
+		}
+		t.Fatalf("make goreleaser-version: %v", err)
 	}
 	if want := "v" + pins[0][1] + "\n"; string(output) != want {
 		t.Fatalf("goreleaser-version = %q, want %q", output, want)
@@ -39,6 +46,30 @@ func TestGoReleaserVersion(t *testing.T) {
 		if !regexp.MustCompile(check.pattern).Match(content) {
 			t.Errorf("%s does not wire the GoReleaser pin into CI", check.path)
 		}
+	}
+}
+
+func goReleaserMakeEnv() []string {
+	env := []string{}
+	for _, entry := range os.Environ() {
+		key, _, _ := strings.Cut(entry, "=")
+		if key != "MAKEFLAGS" && key != "MFLAGS" && key != "MAKELEVEL" {
+			env = append(env, entry)
+		}
+	}
+	return env
+}
+
+func TestGoReleaserVersionFailsWithoutPin(t *testing.T) {
+	cmd := exec.Command("make", "--no-print-directory", "-s", "goreleaser-version", "GORELEASER_VERSION=")
+	cmd.Env = goReleaserMakeEnv()
+	output, err := cmd.Output()
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitCode() == 0 {
+		t.Fatalf("expected a non-zero make exit without a pin, got %v", err)
+	}
+	if len(output) != 0 {
+		t.Fatalf("expected empty stdout without a pin, got %q; stderr: %s", output, exitErr.Stderr)
 	}
 }
 
