@@ -44,6 +44,11 @@ func (h *Handler) HandlePacket(pkt *protocol.Packet) {
 
 func (h *Handler) handleMouse(pkt *protocol.Packet) {
 	md := pkt.Mouse
+	// Windows reports the cursor up to one pixel past the screen edge
+	// (e.g. X=-34 at the left edge of a 1920px screen). Clamp to the device
+	// range so the pointer lands exactly on the edge, where hot corners are.
+	md.X = clampAbs(md.X)
+	md.Y = clampAbs(md.Y)
 	var err error
 	switch int(md.DwFlags) {
 	case protocol.WM_MOUSEMOVE:
@@ -106,4 +111,9 @@ func (h *Handler) handleKeyboard(pkt *protocol.Packet) {
 	if err != nil {
 		slog.Error("keyboard input error", "err", err)
 	}
+}
+
+// clampAbs limits an absolute coordinate to the 0-65535 device range.
+func clampAbs(v int32) int32 {
+	return min(max(v, 0), 65535)
 }
