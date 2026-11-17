@@ -21,7 +21,7 @@ brew tap bketelsen/tap
 brew install --cask bketelsen/tap/mwb
 ```
 
-The [install guide](https://bketelsen.github.io/mwb/getting-started/install/) covers release packages, source builds, updates, and platform requirements.
+The Homebrew cask is experimental. The [install guide](https://bketelsen.github.io/mwb/getting-started/install/) covers the deb and rpm release packages, source builds, updates, and platform requirements.
 
 ## Use
 

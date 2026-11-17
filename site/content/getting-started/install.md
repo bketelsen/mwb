@@ -34,14 +34,14 @@ Stop the running client before the update, then start it again with your existin
 ## Linux deb/rpm packages
 
 Download the package for your architecture from [GitHub releases](https://github.com/bketelsen/mwb/releases).
-In these commands, replace the example filename with the file you downloaded:
+Run the command for your system in the folder that holds the file you downloaded:
 
 ```sh
 # Debian-based systems
-sudo apt install ./mwb_VERSION_ARCH.deb
+sudo apt install ./mwb_*.deb
 
 # RPM-based systems
-sudo rpm -Uvh ./mwb_VERSION_ARCH.rpm
+sudo rpm -Uvh ./mwb-*.rpm
 ```
 
 The packages install the binary at `/usr/bin/mwb`, a systemd user unit at `/usr/lib/systemd/user/mwb.service`, and a udev rule at `/usr/lib/udev/rules.d/99-mwb.rules`.
@@ -72,7 +72,8 @@ On macOS, build with CGo enabled and copy the binary to the path in the supplied
 
 ```sh
 CGO_ENABLED=1 make build
-sudo cp mwb /usr/local/bin/mwb
+sudo install -d /usr/local/bin
+sudo install -m 755 mwb /usr/local/bin/mwb
 ```
 
 Grant [Accessibility permission](macos.md) before normal use.
