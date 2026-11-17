@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -174,6 +175,43 @@ func TestRiskPathsCoverRequiredFiles(t *testing.T) {
 
 var riskMarker = regexp.MustCompile(`os\.Remove|RemoveAll|rm -rf|rm -f|systemctl|udevadm|usermod|modprobe|loginctl|DeriveKey|NewEncryptWriter|NewDecryptReader`)
 
+func riskScanSkip(file string) (bool, error) {
+	if file == "" || strings.HasSuffix(file, ".md") || strings.HasSuffix(file, "_test.go") || strings.HasPrefix(file, "docs/") {
+		return true, nil
+	}
+	info, err := os.Lstat(file)
+	if err != nil {
+		return false, err
+	}
+	// Git stores a symlink's target path, not its content; the tracked target is scanned under its own name.
+	return info.Mode()&os.ModeSymlink != 0, nil
+}
+
+func TestRiskMarkerScanSkipsSymlinks(t *testing.T) {
+	dir := t.TempDir()
+	real := filepath.Join(dir, "real.txt")
+	if err := os.WriteFile(real, []byte("modprobe"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(dir, "alias")
+	if err := os.Symlink(real, alias); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		file string
+		want bool
+	}{
+		{alias, true},
+		{real, false},
+	} {
+		if skip, err := riskScanSkip(tc.file); err != nil {
+			t.Fatal(err)
+		} else if skip != tc.want {
+			t.Errorf("riskScanSkip(%q) = %v, want %v", tc.file, skip, tc.want)
+		}
+	}
+}
+
 func TestRiskPathsCoverMarkerFiles(t *testing.T) {
 	inside, err := exec.Command("git", "rev-parse", "--is-inside-work-tree").CombinedOutput()
 	if err != nil || strings.TrimSpace(string(inside)) != "true" {
@@ -192,9 +230,16 @@ func TestRiskPathsCoverMarkerFiles(t *testing.T) {
 		"internal/input/uinput.go": "setup hints in error messages; they run no command",
 	}
 	hits := map[string]bool{}
-	checked := 0
+	checked, symlinks := 0, 0
 	for _, file := range strings.Split(string(files), "\x00") {
-		if file == "" || strings.HasSuffix(file, ".md") || strings.HasSuffix(file, "_test.go") || strings.HasPrefix(file, "docs/") {
+		skip, err := riskScanSkip(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if skip {
+			if info, err := os.Lstat(file); err == nil && info.Mode()&os.ModeSymlink != 0 {
+				symlinks++
+			}
 			continue
 		}
 		data, err := os.ReadFile(file)
@@ -222,7 +267,7 @@ func TestRiskPathsCoverMarkerFiles(t *testing.T) {
 			t.Errorf("remove unused exemption for %s: no marker hit", file)
 		}
 	}
-	t.Logf("scanned %d files; checked %d marker files", checked, len(hits))
+	t.Logf("scanned %d files; skipped %d symlinks; checked %d marker files", checked, symlinks, len(hits))
 }
 
 func TestRiskPathsNegativeControl(t *testing.T) {
