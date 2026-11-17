@@ -2,6 +2,7 @@
 package network
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"io"
@@ -25,12 +26,16 @@ type Conn struct {
 	nextID     atomic.Int32
 }
 
+// handshakeTimeout allows for the server to resolve the client's name before
+// sending anything, which takes ~5s.
+const handshakeTimeout = 10 * time.Second
+
+// setupTimeout bounds the whole setup (preamble, IV exchange, handshake, and
+// first heartbeat), for reads and writes. It is a var so tests can shorten it.
+var setupTimeout = 2 * handshakeTimeout
+
 // Connect establishes a TCP connection, performs IV exchange and handshake.
 func Connect(addr, securityKey, machineName string, timeout time.Duration) (*Conn, error) {
-	aesKey := protocol.DeriveKey(securityKey)
-	iv := protocol.FixedIV()
-	magic := protocol.Get24BitHash(securityKey)
-
 	raw, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("dial: %w", err)
@@ -47,13 +52,39 @@ func Connect(addr, securityKey, machineName string, timeout time.Duration) (*Con
 		_ = tc.SetNoDelay(true)
 	}
 
-	enc, err := protocol.NewEncryptWriter(raw, aesKey, iv)
+	c, err := setup(raw, securityKey, machineName)
 	if err != nil {
-		return nil, fmt.Errorf("encrypt stream: %w", err)
+		return nil, err
 	}
-	dec, err := protocol.NewDecryptReader(raw, aesKey, iv)
+	ok = true
+	return c, nil
+}
+
+func setup(raw net.Conn, securityKey, machineName string) (*Conn, error) {
+	_ = raw.SetDeadline(time.Now().Add(setupTimeout))
+	magic := protocol.Get24BitHash(securityKey)
+
+	// The server sends its stream preamble and handshakes without waiting for
+	// ours, so read the start of its stream to learn which encryption scheme
+	// its PowerToys version uses, then answer with the same scheme.
+	probe := make([]byte, protocol.ProbeSize)
+	if _, err := io.ReadFull(raw, probe); err != nil {
+		return nil, fmt.Errorf("read stream preamble: %w", err)
+	}
+
+	scheme, peerKey, peerIV, offset, err := protocol.DetectScheme(probe, securityKey, magic)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("detected encryption scheme", "scheme", scheme)
+
+	dec, err := protocol.NewDecryptReader(io.MultiReader(bytes.NewReader(probe[offset:]), raw), peerKey, peerIV)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt stream: %w", err)
+	}
+	enc, err := protocol.NewSchemeEncryptWriter(raw, securityKey, scheme)
+	if err != nil {
+		return nil, fmt.Errorf("encrypt stream: %w", err)
 	}
 
 	// IV exchange: send random 16-byte block, read peer's random block
@@ -99,7 +130,7 @@ func Connect(addr, securityKey, machineName string, timeout time.Duration) (*Con
 		return nil, fmt.Errorf("send heartbeat: %w", err)
 	}
 
-	ok = true
+	_ = raw.SetDeadline(time.Time{})
 	return c, nil
 }
 
@@ -134,9 +165,6 @@ func (c *Conn) doHandshake(machineName string) error {
 	}
 
 	// Read packets until we get a valid HandshakeAck
-	_ = c.raw.SetReadDeadline(time.Now().Add(10 * time.Second))
-	defer func() { _ = c.raw.SetReadDeadline(time.Time{}) }()
-
 	for i := 0; i < 20; i++ {
 		pkt, err := c.RecvPacket()
 		if err != nil {

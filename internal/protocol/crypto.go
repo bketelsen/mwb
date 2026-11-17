@@ -2,6 +2,8 @@
 package protocol
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/sha512"
 	"encoding/binary"
 	"fmt"
@@ -38,6 +40,94 @@ func FixedIV() []byte {
 		s = s[:aesBlockSize]
 	}
 	return []byte(s)
+}
+
+// Scheme identifies the stream encryption variant a PowerToys MWB peer uses.
+type Scheme int
+
+const (
+	// SchemeLegacy uses the fixed salt and IV with 50,000 PBKDF2 iterations.
+	SchemeLegacy Scheme = iota
+	// SchemeHeader50k sends a cleartext random salt+IV header before the
+	// cipher text and derives the key with 50,000 iterations (PowerToys #48742).
+	SchemeHeader50k
+	// SchemeHeader100k is SchemeHeader50k with 100,000 iterations (PowerToys #49600).
+	SchemeHeader100k
+)
+
+func (s Scheme) String() string {
+	switch s {
+	case SchemeLegacy:
+		return "legacy"
+	case SchemeHeader50k:
+		return "header-50k"
+	case SchemeHeader100k:
+		return "header-100k"
+	}
+	return fmt.Sprintf("Scheme(%d)", int(s))
+}
+
+// HasHeader reports whether streams start with a cleartext salt+IV header.
+func (s Scheme) HasHeader() bool {
+	return s != SchemeLegacy
+}
+
+func (s Scheme) iterations() int {
+	if s == SchemeHeader100k {
+		return 100000
+	}
+	return pbkdf2Iter
+}
+
+const saltSize = 16
+
+// HeaderSize is the size of the cleartext salt+IV header used by header schemes.
+const HeaderSize = saltSize + aesBlockSize
+
+// ProbeSize is how much of a peer's stream DetectScheme needs: the optional
+// header, the 16-byte random initial block, and the first packet header.
+const ProbeSize = HeaderSize + aesBlockSize + PacketSize
+
+// DeriveSchemeKey derives the AES-256 key for a header scheme from the salt
+// carried in the stream header.
+func DeriveSchemeKey(securityKey string, salt []byte, s Scheme) []byte {
+	return pbkdf2.Key([]byte(securityKey), salt, s.iterations(), aesKeySize, sha512.New)
+}
+
+// DetectScheme determines which scheme produced the start of a peer's stream
+// by decrypting its first packet and validating it against magic. prefix must
+// hold at least ProbeSize bytes. It returns the scheme, the AES key and the IV
+// for decrypting the peer's stream, and how many bytes of prefix precede the
+// cipher text.
+func DetectScheme(prefix []byte, securityKey string, magic uint32) (s Scheme, key, iv []byte, offset int, err error) {
+	if len(prefix) < ProbeSize {
+		return 0, nil, nil, 0, fmt.Errorf("probe too short: %d bytes, need %d", len(prefix), ProbeSize)
+	}
+
+	firstPacketValid := func(key, iv, ct []byte) bool {
+		block, err := aes.NewCipher(key)
+		if err != nil {
+			return false
+		}
+		pt := make([]byte, aesBlockSize+PacketSize)
+		cipher.NewCBCDecrypter(block, iv).CryptBlocks(pt, ct[:len(pt)])
+		return ValidatePacket(pt[aesBlockSize:], magic) == nil
+	}
+
+	salt, headerIV := prefix[:saltSize], prefix[saltSize:HeaderSize]
+	for _, s := range []Scheme{SchemeHeader100k, SchemeHeader50k} {
+		key := DeriveSchemeKey(securityKey, salt, s)
+		if firstPacketValid(key, headerIV, prefix[HeaderSize:]) {
+			return s, key, headerIV, HeaderSize, nil
+		}
+	}
+
+	key = DeriveKey(securityKey)
+	if firstPacketValid(key, FixedIV(), prefix) {
+		return SchemeLegacy, key, FixedIV(), 0, nil
+	}
+
+	return 0, nil, nil, 0, fmt.Errorf("cannot decrypt peer stream with any known scheme (security key mismatch?)")
 }
 
 // Get24BitHash computes the MWB magic number from the security key.

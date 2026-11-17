@@ -4,6 +4,7 @@ package protocol
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"fmt"
 	"io"
 )
@@ -22,6 +23,22 @@ func NewEncryptWriter(w io.Writer, key, iv []byte) (*EncryptWriter, error) {
 	}
 	mode := cipher.NewCBCEncrypter(block, iv)
 	return &EncryptWriter{w: w, mode: mode}, nil
+}
+
+// NewSchemeEncryptWriter writes the cleartext salt+IV header to w when the
+// scheme uses one, and returns a writer encrypting with the matching key.
+func NewSchemeEncryptWriter(w io.Writer, securityKey string, s Scheme) (*EncryptWriter, error) {
+	if !s.HasHeader() {
+		return NewEncryptWriter(w, DeriveKey(securityKey), FixedIV())
+	}
+	header := make([]byte, HeaderSize)
+	if _, err := rand.Read(header); err != nil {
+		return nil, fmt.Errorf("rand: %w", err)
+	}
+	if _, err := w.Write(header); err != nil {
+		return nil, fmt.Errorf("send encryption header: %w", err)
+	}
+	return NewEncryptWriter(w, DeriveSchemeKey(securityKey, header[:saltSize], s), header[saltSize:])
 }
 
 // Write encrypts data and writes to the underlying writer.
