@@ -36,7 +36,7 @@ docs/               engineering docs: adr/, design/, specs/, plans/
   `make fmt`, then `make verify`. `make ci` adds the race tests and the
   builds.
 - `mise.toml` also pins GoReleaser Pro. `make ci` runs `make release-check`:
-  `goreleaser check --soft` with the pinned GoReleaser, plus a self-test on
+  `goreleaser check` with the pinned GoReleaser, plus a self-test on
   `testdata/goreleaser-invalid.yml`.
 - Run `make check` before each commit and `make ci` before each push
   (frostyard/core ADR-0083). `.github/workflows/ci.yml` runs `make ci` on Linux
