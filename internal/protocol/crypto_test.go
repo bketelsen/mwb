@@ -4,6 +4,7 @@ package protocol
 import (
 	"bytes"
 	"io"
+	"strings"
 	"testing"
 )
 
@@ -180,8 +181,12 @@ func TestDetectSchemeRequiresHandshake(t *testing.T) {
 	for _, s := range []Scheme{SchemeLegacy, SchemeHeader50k, SchemeHeader100k} {
 		t.Run(s.String(), func(t *testing.T) {
 			prefix := peerStreamPrefixWithType(t, securityKey, s, Heartbeat)
-			if _, _, _, _, err := DetectScheme(prefix, securityKey, magic); err == nil {
+			_, _, _, _, err := DetectScheme(prefix, securityKey, magic)
+			if err == nil {
 				t.Fatal("DetectScheme accepted a valid Heartbeat instead of a Handshake")
+			}
+			if want := "no known scheme gives a valid Handshake"; !strings.Contains(err.Error(), want) {
+				t.Fatalf("DetectScheme error = %q, want it to contain %q", err, want)
 			}
 		})
 	}
