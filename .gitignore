@@ -9,3 +9,7 @@
 
 # Documentation site output
 /site/dist/
+
+# .NET build output of the PowerToys vector harness
+/internal/protocol/testdata/powertoys/bin/
+/internal/protocol/testdata/powertoys/obj/

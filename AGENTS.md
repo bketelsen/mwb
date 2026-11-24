@@ -50,7 +50,7 @@ docs/               engineering docs: adr/, design/, specs/, plans/
   - legacy: fixed salt/IV (`"18446744073709551615"`), 50k iterations
   - header-50k (PowerToys #48742, 2026-06): each stream starts with a cleartext 32-byte header (16-byte random salt + 16-byte random IV), 50k iterations
   - header-100k (PowerToys #49600, 2026-07): same header, 100k iterations
-- The server sends its preamble and 10 Handshakes without waiting for the client (after ~5s spent resolving the client's name), so `Connect` reads the first `protocol.ProbeSize` bytes, detects the scheme by decrypting the first packet, then replies with the same scheme
+- The server sends its preamble and 10 Handshakes without waiting for the client (after ~5s spent resolving the client's name), so `Connect` reads the first `protocol.ProbeSize` bytes, detects the scheme by decrypting the first packet, which must be a valid Handshake (magic and checksum), then replies with the same scheme
 - Handshake: send 10 Handshake packets (type 126), respond to peer's with HandshakeAck (type 127)
 - **Critical**: HandshakeAck must have `Src = MachineID` (not 0), otherwise server stores ID.NONE and never routes packets to the socket
 - **Critical**: All packet IDs must be non-zero and unique — server has a zero-initialized dedup ring buffer that silently drops ID=0 packets

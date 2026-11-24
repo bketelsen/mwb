@@ -127,7 +127,7 @@ func DetectScheme(prefix []byte, securityKey string, magic uint32) (s Scheme, ke
 		return SchemeLegacy, key, FixedIV(), 0, nil
 	}
 
-	return 0, nil, nil, 0, fmt.Errorf("cannot decrypt peer stream with any known scheme (security key mismatch?)")
+	return 0, nil, nil, 0, fmt.Errorf("no known scheme gives a valid Handshake as the first packet (security key mismatch?)")
 }
 
 // Get24BitHash computes the MWB magic number from the security key.
