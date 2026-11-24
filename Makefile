@@ -83,8 +83,9 @@ check: fmt verify
 
 # The make ci gates that need no GoReleaser Pro. make bump runs these, not
 # release-check: the tag's release runs GoReleaser Pro in CI from the mise.toml
-# pin (release.yml), and ci.yml already ran release-check on main at the HEAD
-# that bump-main-check requires. So tagging needs no GoReleaser Pro locally.
+# pin (release.yml), and ci.yml runs release-check on every main push. So
+# tagging needs no GoReleaser Pro locally; bump-main-check only proves HEAD is
+# origin/main, so check that main's CI passed at that commit before tagging.
 TAG_GATES := verify race build cross
 
 # ci.yml runs `make ci`; vulncheck stays outside because it needs the network

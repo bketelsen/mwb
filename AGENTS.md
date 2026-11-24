@@ -82,8 +82,10 @@ Accessibility permission must be granted:
   every `make ci` gate but `release-check` (`TAG_GATES` in the `Makefile`),
   then tags `svu next` and pushes the tag. Only the maintainer runs it: agents
   never tag, push a tag or publish a release. Tagging needs no GoReleaser Pro
-  locally: `release.yml` runs it in CI, and `ci.yml` already ran
-  `release-check` on that `main` commit (`bump_test.go`).
+  locally: `release.yml` runs it in CI, and `ci.yml` runs `release-check` on
+  every `main` push (`bump_test.go`). `make bump` checks only that `HEAD` is
+  `origin/main`, not that CI passed there: confirm the CI run of that `main`
+  commit is green before tagging.
 - `.github/workflows/release.yml` runs on a tag: GoReleaser Pro builds Linux
   (CGO off) and macOS (CGO on) in a split matrix, then merges and publishes the
   GitHub release, the deb and rpm packages and the `bketelsen/homebrew-tap`
