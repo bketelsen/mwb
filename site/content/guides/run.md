@@ -52,7 +52,11 @@ A Homebrew installation can use the [manual run](#manual-run); the cask has no s
 The repository supplies [packaging/com.mwb.agent.plist](https://github.com/bketelsen/mwb/blob/main/packaging/com.mwb.agent.plist).
 Its program path is `/usr/local/bin/mwb`.
 Install the binary there, or edit your local plist copy to use your installed binary's absolute path.
-Then, from the source checkout:
+
+Use 1 of the 2 blocks below: the first for a source checkout, the second for a Homebrew installation.
+If the agent is already loaded, `launchctl load` fails. Run `launchctl unload ~/Library/LaunchAgents/com.mwb.agent.plist` first.
+
+From the source checkout:
 
 ```sh
 mkdir -p ~/Library/LaunchAgents
@@ -60,7 +64,9 @@ cp packaging/com.mwb.agent.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.mwb.agent.plist
 ```
 
-For a Homebrew installation, download the plist and set its program path before loading it:
+For a Homebrew installation, download the plist and set its program path before loading it.
+The `curl` command takes the plist from the `main` branch, which can be newer than your installed release.
+To match your release, replace `main` in the URL with the release tag: `v` followed by the version that `brew info --cask bketelsen/tap/mwb` shows.
 
 ```sh
 mkdir -p ~/Library/LaunchAgents

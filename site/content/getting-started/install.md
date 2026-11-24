@@ -31,6 +31,15 @@ brew upgrade --cask bketelsen/tap/mwb
 ```
 
 Stop the running client before the update, then start it again with your existing configuration.
+A loaded [LaunchAgent](../guides/run.md#macos-launchagent) keeps the old process after the upgrade.
+Unload it before the upgrade and load it again after:
+
+```sh
+launchctl unload ~/Library/LaunchAgents/com.mwb.agent.plist
+brew update
+brew upgrade --cask bketelsen/tap/mwb
+launchctl load ~/Library/LaunchAgents/com.mwb.agent.plist
+```
 
 ## Linux deb/rpm packages
 
