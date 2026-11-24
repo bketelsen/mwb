@@ -81,9 +81,15 @@ verify: tidy-check vet format-check lint test
 
 check: fmt verify
 
+# The make ci gates that need no GoReleaser Pro. make bump runs these, not
+# release-check: the tag's release runs GoReleaser Pro in CI from the mise.toml
+# pin (release.yml), and ci.yml already ran release-check on main at the HEAD
+# that bump-main-check requires. So tagging needs no GoReleaser Pro locally.
+TAG_GATES := verify race build cross
+
 # ci.yml runs `make ci`; vulncheck stays outside because it needs the network
 # (frostyard/core ADR-0083).
-ci: verify race build cross release-check
+ci: $(TAG_GATES) release-check
 
 vulncheck:
 	go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
@@ -125,8 +131,8 @@ bump-main-check:
 bump:
 	$(MAKE) svu-version-check
 	$(MAKE) bump-main-check
-	$(MAKE) ci
-	@test -z "$$(git status --porcelain)" || { echo "make ci changed the working tree; not tagging."; exit 1; }
+	$(MAKE) $(TAG_GATES)
+	@test -z "$$(git status --porcelain)" || { echo "the gates changed the working tree; not tagging."; exit 1; }
 	@version=$$(svu next); \
 		git tag -a "$$version" -m "Version $$version"; \
 		echo "Tagged $$version; pushing it to origin"; \

@@ -1,0 +1,7 @@
+{
+  "date": "2026-11-24",
+  "scope": "Makefile",
+  "correction": "make bump runs every make ci gate but release-check (TAG_GATES), so tagging needs no GoReleaser Pro on the maintainer's machine; release.yml runs GoReleaser Pro in CI from the mise.toml pin, and ci.yml runs release-check on main.",
+  "evidence": "make bump for v0.2.7 at 3b5d67e stopped in goreleaser-version-check (expected goreleaser-pro 2.20.2, found missing) on a machine without GoReleaser Pro; bump_test.go TestBumpNeedsNoGoReleaser fails without the fix",
+  "promoted_to": "bump_test.go"
+}
